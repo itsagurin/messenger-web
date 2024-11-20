@@ -7,12 +7,15 @@ export class UsersController {
 
   @Post('register')
   async register(@Body() body: { email: string; password: string }) {
+    console.log('Incoming data:', body);
     try {
+      console.log('Registration:', body.email);
       return {
         success: true,
         data: await this.usersService.register(body.email, body.password)
       };
     } catch (error) {
+      console.error('Registration Error:', error);
       return {
         success: false,
         message: error.message
@@ -22,12 +25,15 @@ export class UsersController {
 
   @Post('login')
   async login(@Body() body: { email: string; password: string }) {
+    console.log('Incoming data:', body);
     try {
+      console.log('Login:', body.email);
       return {
         success: true,
         data: await this.usersService.login(body.email, body.password)
       }
     } catch (error) {
+      console.error('Login Error:', error);
       return {
         success: false,
         message: error.message
