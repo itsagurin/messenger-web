@@ -1,7 +1,8 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { UsersModule } from './users/users.module';
 import { APP_FILTER } from '@nestjs/core';
 import { HttpExceptionFilter } from "./http-exception.filter";
+import { CorsMiddleware } from './users/users.service';
 
 @Module({
   imports: [UsersModule],
@@ -12,4 +13,9 @@ import { HttpExceptionFilter } from "./http-exception.filter";
     }
   ]
 })
-export class AppModule {}
+export class AppModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(CorsMiddleware).forRoutes('*');
+  }
+}
+

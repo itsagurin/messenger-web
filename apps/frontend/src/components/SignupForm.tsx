@@ -34,7 +34,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
       if (result.success) {
         onSignupSuccess();
         // Редирект или другие действия после успешной регистрации
-        window.location.href = '/test'; // Замените на нужный путь
+        window.location.href = '../../test.html'; // Замените на нужный путь
       }
     } catch (error: any) {
       setError(error.message || 'Registration error');
