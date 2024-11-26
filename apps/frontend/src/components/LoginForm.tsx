@@ -1,5 +1,6 @@
 import React, { useState, ChangeEvent } from 'react';
 import { authService } from '../services/authService';
+import { useNavigate } from 'react-router-dom';
 
 interface LoginFormProps {
   onLoginSuccess: () => void;
@@ -30,11 +31,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
       }
 
       const result = await authService.login({ email, password });
+      const navigate = useNavigate();
 
       if (result.success) {
         onLoginSuccess();
-        // Редирект или другие действия после успешного входа
-        window.location.href = '/test'; // Замените на нужный путь
+        navigate('/main');
       }
     } catch (error: any) {
       setError(error.message || 'Ошибка входа');

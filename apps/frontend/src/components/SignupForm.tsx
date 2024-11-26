@@ -1,5 +1,6 @@
 import React, { useState, ChangeEvent } from 'react';
 import { authService } from '../services/authService';
+import { useNavigate } from 'react-router-dom';
 
 interface SignupFormProps {
   onSignupSuccess: () => void;
@@ -30,11 +31,11 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
       }
 
       const result = await authService.register({ email, password });
+      const navigate = useNavigate();
 
       if (result.success) {
         onSignupSuccess();
-        // Редирект или другие действия после успешной регистрации
-        window.location.href = '../../test.html'; // Замените на нужный путь
+        navigate('/main');
       }
     } catch (error: any) {
       setError(error.message || 'Registration error');
