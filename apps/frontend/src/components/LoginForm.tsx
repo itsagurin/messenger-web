@@ -10,6 +10,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
@@ -31,11 +32,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
       }
 
       const result = await authService.login({ email, password });
-      const navigate = useNavigate();
 
       if (result.success) {
         onLoginSuccess();
         navigate('/main');
+        window.location.reload();
       }
     } catch (error: any) {
       setError(error.message || 'Ошибка входа');

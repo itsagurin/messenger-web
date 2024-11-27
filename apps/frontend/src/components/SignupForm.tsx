@@ -10,6 +10,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
@@ -31,11 +32,11 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
       }
 
       const result = await authService.register({ email, password });
-      const navigate = useNavigate();
 
       if (result.success) {
         onSignupSuccess();
         navigate('/main');
+        window.location.reload();
       }
     } catch (error: any) {
       setError(error.message || 'Registration error');
