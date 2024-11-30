@@ -36,7 +36,9 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
       if (result.success) {
         onSignupSuccess();
         navigate('/main');
-        window.location.reload();
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
       }
     } catch (error: any) {
       setError(error.message || 'Registration error');

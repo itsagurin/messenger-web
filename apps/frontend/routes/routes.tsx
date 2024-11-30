@@ -7,12 +7,13 @@ import ReactDOM from 'react-dom/client';
 
 function Application() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/main" element={<Messenger />}/>
-      </Routes>
-    </BrowserRouter>
+    <Routes>
+      <Route path="/main" element={<Messenger />}/>
+    </Routes>
   );
 }
 
-ReactDOM.createRoot(document.getElementById('messenger')!).render(<Application />);
+const rootElement = document.getElementById('messenger');
+if (rootElement) {
+  ReactDOM.createRoot(rootElement).render(<Application />);
+}

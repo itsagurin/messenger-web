@@ -36,7 +36,9 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
       if (result.success) {
         onLoginSuccess();
         navigate('/main');
-        window.location.reload();
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
       }
     } catch (error: any) {
       setError(error.message || 'Ошибка входа');
