@@ -14,5 +14,10 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     open: '/'
+  },
+  css: {
+    modules: {
+      localsConvention: 'camelCaseOnly'
+    }
   }
 });

@@ -1,13 +1,11 @@
 import React from 'react';
-import Chat from '../components/Chat/Chat';
-import Footer from '../components/Footer/Footer';
+import HeaderBlock from '../components/HeaderBlock/HeaderBlock.tsx';
 
 const Messenger: React.FC = () => {
   return (
     <div>
       <div id="root">
-        <Footer />
-        <Chat />
+        <HeaderBlock />
       </div>
     </div>
   );
