@@ -1,10 +1,11 @@
-import Chat from '../components/Chat/Chat.tsx';
-import Footer from '../components/Footer/Footer.tsx';
+import React from 'react';
+import Chat from '../components/Chat/Chat';
+import Footer from '../components/Footer/Footer';
 
-const Messenger = () => {
+const Messenger: React.FC = () => {
   return (
     <div>
-      <div id="messenger">
+      <div id="root">
         <Footer />
         <Chat />
       </div>

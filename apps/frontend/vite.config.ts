@@ -1,15 +1,18 @@
 import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  server: {
-    fs: {
-      strict: false,
-    },
-    proxy: {
-      '/main': {
-        target: 'http://localhost:5173', // Ваш dev-сервер
-        rewrite: () => 'src/pages/messenger.html',
-      },
-    },
+  plugins: [react()],
+  build: {
+    rollupOptions: {
+      input: {
+        main: './index.html',
+      }
+    }
   },
+  server: {
+    port: 5173,
+    strictPort: true,
+    open: '/'
+  }
 });

@@ -1,7 +1,11 @@
-const Chat = () => {
-  return <div>
-    <h1>1111111111</h1>
-  </div>
+import React from 'react';
+
+const Chat: React.FC = () => {
+  return (
+    <div>
+      <h1>Chat Component</h1>
+    </div>
+  );
 };
 
 export default Chat;

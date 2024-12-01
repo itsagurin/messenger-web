@@ -1,19 +1,19 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import {
+  createBrowserRouter,
+  createRoutesFromElements,
+  Route
+} from 'react-router-dom';
+import App from '../src/App';
 import Messenger from '../src/pages/messenger';
-// @ts-ignore
-import React from 'react';
-// @ts-ignore
-import ReactDOM from 'react-dom/client';
 
-function Application() {
-  return (
-    <Routes>
-      <Route path="/main" element={<Messenger />}/>
-    </Routes>
-  );
-}
-
-const rootElement = document.getElementById('messenger');
-if (rootElement) {
-  ReactDOM.createRoot(rootElement).render(<Application />);
-}
+export const router = createBrowserRouter(
+  createRoutesFromElements(
+    <>
+      <Route path="/" element={<App />} />
+      <Route path="/main" element={<Messenger />} />
+    </>
+  ),
+  {
+    basename: '/'
+  }
+);
