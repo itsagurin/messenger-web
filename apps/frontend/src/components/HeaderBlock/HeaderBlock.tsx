@@ -1,14 +1,15 @@
 import React from 'react';
-import logo from "../../assets/logo.png"
-import "./css/HeaderBlock.module.css"
+import styles from "./css/HeaderBlock.module.css";
 
-const HeaderBlock: React.FC = () => {
+interface HeaderBlockProps {
+  className?: string;
+}
+
+const HeaderBlock: React.FC<HeaderBlockProps> = ({ className }) => {
   return (
-    <header className="headerBlock">
-      <img src={logo} className="logo" alt="logo" />
-      <div className="search-container">
-        <input type="text" className="search-input" placeholder="find people" />
-      </div>
+    <header className={`${styles.headerBlock} ${className || ''}`.trim()}>
+      <a className={styles.a1}>Profile</a>
+      <a className={styles.a1}>Pricing</a>
     </header>
   );
 };
