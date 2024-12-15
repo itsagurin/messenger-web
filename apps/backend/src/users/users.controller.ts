@@ -1,9 +1,10 @@
 import { Controller, Post, Body, Get, HttpCode } from '@nestjs/common';
 import { UsersService } from './users.service';
+import { UsersGateway } from '../websocket/wsgateway';
 
 @Controller('auth')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService, private readonly UsersGateway: UsersGateway,) {}
 
   @Post('register')
   async register(@Body() body: { email: string; password: string }) {
@@ -14,6 +15,7 @@ export class UsersController {
         success: true,
         data: await this.usersService.register(body.email, body.password)
       };
+      await this.UsersGateway.updateUsers();
     } catch (error) {
       console.error('Registration Error:', error);
       return {

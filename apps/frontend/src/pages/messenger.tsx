@@ -8,7 +8,7 @@ const Messenger: React.FC = () => {
     <div>
       <div id="root">
         <HeaderBlock className="header-block" />
-        <Chat />
+        <Chat className="chat-block" />
       </div>
     </div>
   );

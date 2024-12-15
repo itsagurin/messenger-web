@@ -8,8 +8,8 @@ interface HeaderBlockProps {
 const HeaderBlock: React.FC<HeaderBlockProps> = ({ className }) => {
   return (
     <header className={`${styles.headerBlock} ${className || ''}`.trim()}>
-      <a className={styles.a1}>Profile</a>
-      <a className={styles.a1}>Pricing</a>
+      <a className={styles.a1} href="#">Profile</a>
+      <a className={styles.a1} href="#">Pricing</a>
     </header>
   );
 };

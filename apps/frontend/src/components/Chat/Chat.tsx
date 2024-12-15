@@ -1,58 +1,78 @@
 import { useState, useEffect } from 'react';
+import io from 'socket.io-client';
 
-const ChatComponent = () => {
-  const [users, setUsers] = useState([]);
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
+interface User {
+  id: number;
+  email: string;
+}
+
+interface Message {
+  id: number;
+  sender: number | 'current';
+  text: string;
+  timestamp: Date;
+}
+
+interface ChatComponentProps {
+  className?: string;
+}
+
+const ChatComponent = ({ className }: ChatComponentProps) => {
+  const [users, setUsers] = useState<User[]>([]); // users list
+  const [selectedUser, setSelectedUser] = useState<User | null>(null); // selected user
+  const [messages, setMessages] = useState<Message[]>([]); // message list
+  const [newMessage, setNewMessage] = useState<string>(''); // new message
 
   useEffect(() => {
-    // Simulating fetching users
-    const mockUsers = [
-      { id: 1, email: 'user1@example.com' },
-      { id: 2, email: 'user2@example.com' },
-      { id: 3, email: 'user3@example.com' }
-    ];
-    setUsers(mockUsers);
+    const socket = io('http://localhost:4000'); // Укажите адрес вашего сервера
+
+    // Получаем список пользователей через WebSocket
+    socket.on('users', (data: User[]) => {
+      setUsers(data);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
-  const handleSelectUser = (user) => {
+  const handleSelectUser = (user: User) => {
     setSelectedUser(user);
-    // Simulating fetching chat history
-    setMessages([
+    const mockMessages: Message[] = [
       { id: 1, sender: user.id, text: 'Hello!', timestamp: new Date() },
-      { id: 2, sender: 'current', text: 'Hi there!', timestamp: new Date() }
-    ]);
+      { id: 2, sender: 'current', text: 'Hi there!', timestamp: new Date() },
+    ];
+    setMessages(mockMessages);
   };
 
   const handleSendMessage = () => {
     if (!newMessage.trim() || !selectedUser) return;
 
-    const newMsg = {
+    const newMsg: Message = {
       id: messages.length + 1,
       sender: 'current',
       text: newMessage,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
-    setMessages(prevMessages => [...prevMessages, newMsg]);
+    setMessages((prevMessages) => [...prevMessages, newMsg]);
     setNewMessage('');
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh' }}>
-      <div style={{ width: '250px', borderRight: '1px solid #ccc', padding: '10px' }}>
+    <div className={className} style={{ display: 'flex', height: '100vh' }}>
+      <div style={{ width: '30%', borderRight: '1px solid #ccc', padding: '10px' }}>
         <h2>Users</h2>
         {users.length === 0 ? (
           <div>No users available</div>
         ) : (
-          users.map(user => (
+          users.map((user) => (
             <div
               key={user.id}
               onClick={() => handleSelectUser(user)}
               style={{
                 cursor: 'pointer',
                 padding: '10px',
-                backgroundColor: selectedUser?.id === user.id ? '#f0f0f0' : 'white'
+                backgroundColor: selectedUser?.id === user.id ? '#f0f0f0' : 'white',
               }}
             >
               {user.email}
@@ -66,12 +86,12 @@ const ChatComponent = () => {
           <>
             <div style={{ flex: 1, overflowY: 'auto', padding: '10px' }}>
               <h2>Chat with {selectedUser.email}</h2>
-              {messages.map(msg => (
+              {messages.map((msg) => (
                 <div
                   key={msg.id}
                   style={{
                     textAlign: msg.sender === 'current' ? 'right' : 'left',
-                    margin: '10px 0'
+                    margin: '10px 0',
                   }}
                 >
                   {msg.text}
@@ -92,7 +112,14 @@ const ChatComponent = () => {
             </div>
           </>
         ) : (
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              height: '100%',
+            }}
+          >
             Select a user to start chatting
           </div>
         )}
