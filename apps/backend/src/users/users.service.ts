@@ -43,6 +43,22 @@ export class UsersService {
     async findAll() {
         return this.prisma.user.findMany();
     }
+
+    async sendMessage(senderId: number, text: string) {
+        return this.prisma.message.create({
+            data: {
+                senderId,
+                text,
+            },
+        });
+    }
+
+    async getUserMessages(userId: number) {
+        return this.prisma.message.findMany({
+            where: { senderId: userId },
+            orderBy: { createdAt: 'asc' },
+        });
+    }
 }
 
 @Injectable()
