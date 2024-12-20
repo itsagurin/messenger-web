@@ -4,12 +4,100 @@ interface LoginData {
 }
 
 interface AuthResponse {
+  accessToken: string;
   success: boolean;
   message?: string;
   token?: string;
+  refreshToken?: string;
 }
 
-export const authService = {
+interface AuthServiceInterface {
+  getRefreshToken(): string | null;
+  getAccessToken(): string | null;
+
+  setTokens(accessToken: string, refreshToken: string | undefined): void;
+  clearTokens(): void;
+  refreshTokens(): Promise<boolean>;
+  makeAuthenticatedRequest(url: string, options?: RequestInit): Promise<Response>;
+}
+
+class AuthService implements AuthServiceInterface {
+  private accessToken: string | null = null;
+  private refreshToken: string | null = null;// allow refreshToken to be undefined
+
+
+  getRefreshToken(): string | null {
+    return this.refreshToken;
+  }
+
+  getAccessToken(): string | null {
+    return this.accessToken;
+  }
+
+  setTokens(accessToken: string, refreshToken: string | null | undefined): void {
+    this.accessToken = accessToken;
+    this.refreshToken = refreshToken ?? null;
+    localStorage.setItem('refreshToken', this.refreshToken ?? '');
+  }
+
+  clearTokens(): void {
+    this.accessToken = null;
+    this.refreshToken = null;
+    localStorage.removeItem('refreshToken');
+  }
+
+  async refreshTokens(): Promise<boolean> {
+    try {
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (!refreshToken) {
+        throw new Error('No refresh token');
+      }
+
+      const response = await fetch('http://your-api-url/auth/refresh', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        this.setTokens(data.accessToken, data.refreshToken);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      this.clearTokens();
+      return false;
+    }
+  }
+
+  async makeAuthenticatedRequest(url: string, options: RequestInit = {}): Promise<Response> {
+    try {
+      const headers = {
+        ...options.headers,
+        'Authorization': `Bearer ${this.accessToken}`,
+      };
+
+      const response = await fetch(url, { ...options, headers });
+
+      if (response.status === 401) {
+        const refreshed = await this.refreshTokens();
+        if (refreshed) {
+          headers['Authorization'] = `Bearer ${this.accessToken}`;
+          return fetch(url, { ...options, headers });
+        } else {
+          throw new Error('Authentication failed');
+        }
+      }
+
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async login(loginData: LoginData): Promise<AuthResponse> {
     try {
       console.log('Login Request:', {
@@ -54,8 +142,14 @@ export const authService = {
       console.log('Login Result:', result);
 
       if (result.success) {
-        localStorage.setItem('token', result.token);
-        return result;
+        // Здесь проверяем наличие refreshToken перед его сохранением
+        if (result.refreshToken) {
+          localStorage.setItem('token', result.token || ''); // если token необязателен
+          authService.setTokens(result.accessToken, result.refreshToken); // сохраняем токены
+          return result;
+        } else {
+          throw new Error('Refresh token is missing');
+        }
       }
 
       throw new Error('Login unsuccessful');
@@ -63,7 +157,7 @@ export const authService = {
       console.error('Full Login Error:', error);
       throw error;
     }
-  },
+  }
 
   async register(registerData: LoginData): Promise<AuthResponse> {
     try {
@@ -109,8 +203,14 @@ export const authService = {
       console.log('Register Result:', result);
 
       if (result.success) {
-        localStorage.setItem('token', result.token);
-        return result;
+        // Проверяем наличие refreshToken перед его использованием
+        if (result.refreshToken) {
+          localStorage.setItem('token', result.token || ''); // если token необязателен
+          authService.setTokens(result.accessToken, result.refreshToken); // сохраняем токены
+          return result;
+        } else {
+          throw new Error('Refresh token is missing');
+        }
       }
 
       throw new Error('Registration unsuccessful');
@@ -118,5 +218,7 @@ export const authService = {
       console.error('Full Registration Error:', error);
       throw error;
     }
-  },
-};
+  }
+}
+
+export const authService = new AuthService();

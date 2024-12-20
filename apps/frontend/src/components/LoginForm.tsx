@@ -3,7 +3,7 @@ import { authService } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
 
 interface LoginFormProps {
-  onLoginSuccess: () => void;
+  onLoginSuccess?: () => void; // Ожидаем, что может быть передана функция
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
@@ -12,20 +12,12 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setEmail(e.target.value);
-    setError('');
-  };
-
-  const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setPassword(e.target.value);
-    setError('');
-  };
+  const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value);
+  const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value);
 
   const handleSubmit = async () => {
     try {
       setError('');
-
       if (!email || !password) {
         setError('Email и пароль обязательны');
         return;
@@ -34,11 +26,16 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
       const result = await authService.login({ email, password });
 
       if (result.success) {
-        onLoginSuccess();
+        authService.setTokens(result.accessToken, result.refreshToken);
         navigate('/main');
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
+        // setTimeout(() => window.location.reload(), 1500);
+
+        // Вызываем onLoginSuccess, если он был передан
+        if (onLoginSuccess) {
+          onLoginSuccess();
+        }
+      } else {
+        setError(result.message || 'Ошибка входа');
       }
     } catch (error: any) {
       setError(error.message || 'Ошибка входа');
@@ -64,10 +61,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
             value={password}
             onChange={handlePasswordChange}
           />
-          <div
-            className="btn login-button"
-            onClick={handleSubmit}
-          >
+          <div className="btn login-button" onClick={handleSubmit}>
             Log in
           </div>
         </div>

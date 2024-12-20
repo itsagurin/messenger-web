@@ -3,7 +3,7 @@ import { authService } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
 
 interface SignupFormProps {
-  onSignupSuccess: () => void;
+  onSignupSuccess?: () => void; // Ожидаем, что может быть передана функция
 }
 
 const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
@@ -12,36 +12,33 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setEmail(e.target.value);
-    setError('');
-  };
-
-  const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setPassword(e.target.value);
-    setError('');
-  };
+  const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value);
+  const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value);
 
   const handleSubmit = async () => {
     try {
       setError('');
-
       if (!email || !password) {
-        setError('Email and password required');
+        setError('Email и пароль обязательны');
         return;
       }
 
       const result = await authService.register({ email, password });
 
       if (result.success) {
-        onSignupSuccess();
+        authService.setTokens(result.accessToken, result.refreshToken);
         navigate('/main');
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
+        // setTimeout(() => window.location.reload(), 1500);
+
+        // Вызываем onSignupSuccess, если он был передан
+        if (onSignupSuccess) {
+          onSignupSuccess();
+        }
+      } else {
+        setError(result.message || 'Ошибка регистрации');
       }
     } catch (error: any) {
-      setError(error.message || 'Registration error');
+      setError(error.message || 'Ошибка регистрации');
     }
   };
 
@@ -64,10 +61,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
             value={password}
             onChange={handlePasswordChange}
           />
-          <div
-            className="btn signup-button"
-            onClick={handleSubmit}
-          >
+          <div className="btn signup-button" onClick={handleSubmit}>
             Sign up
           </div>
         </div>
