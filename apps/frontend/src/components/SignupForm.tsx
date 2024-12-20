@@ -28,9 +28,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
       if (result.success) {
         authService.setTokens(result.accessToken, result.refreshToken);
         navigate('/main');
-        // setTimeout(() => window.location.reload(), 1500);
 
-        // Вызываем onSignupSuccess, если он был передан
         if (onSignupSuccess) {
           onSignupSuccess();
         }
