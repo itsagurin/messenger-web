@@ -3,7 +3,7 @@ import { authService } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
 
 interface SignupFormProps {
-  onSignupSuccess?: () => void; // Ожидаем, что может быть передана функция
+  onSignupSuccess?: () => void;
 }
 
 const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
@@ -19,7 +19,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
     try {
       setError('');
       if (!email || !password) {
-        setError('Email и пароль обязательны');
+        setError('Email and password are required');
         return;
       }
 
@@ -33,10 +33,10 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
           onSignupSuccess();
         }
       } else {
-        setError(result.message || 'Ошибка регистрации');
+        setError(result.message || 'Registration error');
       }
     } catch (error: any) {
-      setError(error.message || 'Ошибка регистрации');
+      setError(error.message || 'Registration error');
     }
   };
 

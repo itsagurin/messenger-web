@@ -23,7 +23,7 @@ interface AuthServiceInterface {
 
 class AuthService implements AuthServiceInterface {
   private accessToken: string | null = null;
-  private refreshToken: string | null = null;// allow refreshToken to be undefined
+  private refreshToken: string | null = null; // allow refreshToken to be undefined
 
 
   getRefreshToken(): string | null {
@@ -53,7 +53,7 @@ class AuthService implements AuthServiceInterface {
         throw new Error('No refresh token');
       }
 
-      const response = await fetch('http://your-api-url/auth/refresh', {
+      const response = await fetch('http://localhost:4000/auth/refresh', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -142,10 +142,10 @@ class AuthService implements AuthServiceInterface {
       console.log('Login Result:', result);
 
       if (result.success) {
-        // Здесь проверяем наличие refreshToken перед его сохранением
+        // Here we check for the presence of refreshToken before saving it
         if (result.refreshToken) {
-          localStorage.setItem('token', result.token || ''); // если token необязателен
-          authService.setTokens(result.accessToken, result.refreshToken); // сохраняем токены
+          localStorage.setItem('token', result.token || ''); // if token is optional
+          authService.setTokens(result.accessToken, result.refreshToken); // save tokens
           return result;
         } else {
           throw new Error('Refresh token is missing');
@@ -203,10 +203,10 @@ class AuthService implements AuthServiceInterface {
       console.log('Register Result:', result);
 
       if (result.success) {
-        // Проверяем наличие refreshToken перед его использованием
+        // Check for refreshToken before using it
         if (result.refreshToken) {
-          localStorage.setItem('token', result.token || ''); // если token необязателен
-          authService.setTokens(result.accessToken, result.refreshToken); // сохраняем токены
+          localStorage.setItem('token', result.token || ''); // if token is optional
+          authService.setTokens(result.accessToken, result.refreshToken); // save tokens
           return result;
         } else {
           throw new Error('Refresh token is missing');

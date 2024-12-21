@@ -4,7 +4,7 @@ import { authService} from '../src/services/authService.ts';
 
 const PrivateRoute: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true); // Состояние для отслеживания загрузки
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = authService.getAccessToken();
@@ -17,7 +17,7 @@ const PrivateRoute: React.FC = () => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/access-denied" replace />;
   }
 
   return <Outlet />;

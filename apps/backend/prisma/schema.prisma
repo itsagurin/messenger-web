@@ -31,7 +31,7 @@ model Message {
   text      String
   createdAt DateTime @default(now())
 
-  sender User @relation(fields: [senderId], references: [id]) // Связь с моделью User
+  sender User @relation(fields: [senderId], references: [id])
 
   @@map("message")
 }

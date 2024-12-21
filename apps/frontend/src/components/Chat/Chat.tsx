@@ -24,9 +24,9 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
   const [newMessage, setNewMessage] = useState<string>(''); // new message
 
   useEffect(() => {
-    const socket = io('http://localhost:4000'); // Укажите адрес вашего сервера
+    const socket = io('http://localhost:4000');
 
-    // Получаем список пользователей через WebSocket
+    // listen for users event
     socket.on('users', (data: User[]) => {
       setUsers(data);
     });

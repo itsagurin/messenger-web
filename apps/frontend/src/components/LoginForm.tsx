@@ -3,7 +3,7 @@ import { authService } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
 
 interface LoginFormProps {
-  onLoginSuccess?: () => void; // Ожидаем, что может быть передана функция
+  onLoginSuccess?: () => void;
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
@@ -19,7 +19,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
     try {
       setError('');
       if (!email || !password) {
-        setError('Email и пароль обязательны');
+        setError('Email and password are required');
         return;
       }
 
@@ -33,10 +33,10 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
           onLoginSuccess();
         }
       } else {
-        setError(result.message || 'Ошибка входа');
+        setError(result.message || 'Login error');
       }
     } catch (error: any) {
-      setError(error.message || 'Ошибка входа');
+      setError(error.message || 'Login error');
     }
   };
 
