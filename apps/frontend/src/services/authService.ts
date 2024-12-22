@@ -4,6 +4,7 @@ interface LoginData {
 }
 
 interface AuthResponse {
+  data: LoginData;
   accessToken: string;
   success: boolean;
   message?: string;

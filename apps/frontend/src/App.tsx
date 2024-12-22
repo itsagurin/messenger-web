@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import LoginForm from './components/LoginForm';
 import SignupForm from './components/SignupForm';
 import './App.css';
+import { UserProvider } from './services/userContext.tsx';
 
 const App: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -54,8 +55,10 @@ const App: React.FC = () => {
           </div>
         </div>
         <div className="container-form">
-          <LoginForm onLoginSuccess={handleAuthSuccess} />
-          <SignupForm onSignupSuccess={handleAuthSuccess} />
+          <UserProvider>
+            <LoginForm onLoginSuccess={handleAuthSuccess} />
+            <SignupForm onSignupSuccess={handleAuthSuccess} />
+          </UserProvider>
         </div>
       </div>
     </div>

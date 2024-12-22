@@ -1,6 +1,7 @@
 import React, { useState, ChangeEvent } from 'react';
 import { authService } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '../services/userContext';
 
 interface SignupFormProps {
   onSignupSuccess?: () => void;
@@ -11,6 +12,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { setCurrentUser } = useUser();
 
   const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value);
   const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value);
@@ -27,6 +29,8 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
 
       if (result.success) {
         authService.setTokens(result.accessToken, result.refreshToken);
+        // Сохраняем информацию о пользователе из ответа сервера
+        setCurrentUser(result.data);
         navigate('/main');
 
         if (onSignupSuccess) {

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import io from 'socket.io-client';
+import { useUser } from '../../services/userContext';
 
 interface User {
-  id: number;
+  userId: number;
   email: string;
 }
 
@@ -18,35 +19,39 @@ interface ChatComponentProps {
 }
 
 const ChatComponent = ({ className }: ChatComponentProps) => {
-  const [users, setUsers] = useState<User[]>([]); // users list
-  const [selectedUser, setSelectedUser] = useState<User | null>(null); // selected user
-  const [messages, setMessages] = useState<Message[]>([]); // message list
-  const [newMessage, setNewMessage] = useState<string>(''); // new message
+  const { currentUser } = useUser();
+  const [users, setUsers] = useState<User[]>([]);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState<string>('');
 
   useEffect(() => {
+    if (!currentUser) return;
+
     const socket = io('http://localhost:4000');
 
-    // listen for users event
     socket.on('users', (data: User[]) => {
-      setUsers(data);
+      // Фильтруем список пользователей, исключая текущего пользователя
+      const filteredUsers = data.filter(user => user.userId !== currentUser.userId);
+      setUsers(filteredUsers);
     });
 
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [currentUser]);
 
   const handleSelectUser = (user: User) => {
     setSelectedUser(user);
     const mockMessages: Message[] = [
-      { id: 1, sender: user.id, text: 'Hello!', timestamp: new Date() },
+      { id: 1, sender: user.userId, text: 'Hello!', timestamp: new Date() },
       { id: 2, sender: 'current', text: 'Hi there!', timestamp: new Date() },
     ];
     setMessages(mockMessages);
   };
 
   const handleSendMessage = () => {
-    if (!newMessage.trim() || !selectedUser) return;
+    if (!newMessage.trim() || !selectedUser || !currentUser) return;
 
     const newMsg: Message = {
       id: messages.length + 1,
@@ -58,6 +63,10 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
     setNewMessage('');
   };
 
+  if (!currentUser) {
+    return <div>Please log in to access the chat</div>;
+  }
+
   return (
     <div className={className} style={{ display: 'flex', height: '100vh' }}>
       <div style={{ width: '30%', borderRight: '1px solid #ccc', padding: '10px' }}>
@@ -67,12 +76,12 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
         ) : (
           users.map((user) => (
             <div
-              key={user.id}
+              key={user.userId}
               onClick={() => handleSelectUser(user)}
               style={{
                 cursor: 'pointer',
                 padding: '10px',
-                backgroundColor: selectedUser?.id === user.id ? '#f0f0f0' : 'white',
+                backgroundColor: selectedUser?.userId === user.userId ? '#f0f0f0' : 'white',
               }}
             >
               {user.email}
