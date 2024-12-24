@@ -28,11 +28,20 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
       const result = await authService.register({ email, password });
 
       if (result.success) {
+        // Сохраняем токены в authService или localStorage
         authService.setTokens(result.accessToken, result.refreshToken);
-        // Сохраняем информацию о пользователе из ответа сервера
-        setCurrentUser(result.data);
+
+        // Преобразуем данные от API к типу User
+        const user = {
+          userId: result.data.userId,
+          email: result.data.email,
+        };
+        setCurrentUser(user);
+
+        // Навигация на основную страницу
         navigate('/main');
 
+        // Вызываем коллбэк, если он передан
         if (onSignupSuccess) {
           onSignupSuccess();
         }
@@ -40,7 +49,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
         setError(result.message || 'Registration error');
       }
     } catch (error: any) {
-      setError(error.message || 'Registration error');
+      setError(error.message || 'An unexpected error occurred');
     }
   };
 

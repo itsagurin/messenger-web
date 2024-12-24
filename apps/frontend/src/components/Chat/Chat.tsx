@@ -43,11 +43,7 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
 
   const handleSelectUser = (user: User) => {
     setSelectedUser(user);
-    const mockMessages: Message[] = [
-      { id: 1, sender: user.userId, text: 'Hello!', timestamp: new Date() },
-      { id: 2, sender: 'current', text: 'Hi there!', timestamp: new Date() },
-    ];
-    setMessages(mockMessages);
+    setMessages([]);  // очищаем сообщения при выборе нового пользователя
   };
 
   const handleSendMessage = () => {
@@ -59,12 +55,14 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
       text: newMessage,
       timestamp: new Date(),
     };
+
+    // Добавляем сообщение в список
     setMessages((prevMessages) => [...prevMessages, newMsg]);
-    setNewMessage('');
+    setNewMessage('');  // очищаем поле ввода
   };
 
   if (!currentUser) {
-    return <div>Please log in to access the chat</div>;
+    return <div style={{ color: 'white' }}>Please log in to access the chat</div>;
   }
 
   return (
@@ -74,19 +72,20 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
         {users.length === 0 ? (
           <div>No users available</div>
         ) : (
-          users.map((user) => (
-            <div
-              key={user.userId}
-              onClick={() => handleSelectUser(user)}
-              style={{
-                cursor: 'pointer',
-                padding: '10px',
-                backgroundColor: selectedUser?.userId === user.userId ? '#f0f0f0' : 'white',
-              }}
-            >
-              {user.email}
-            </div>
-          ))
+          users.filter((user) => user.userId !== currentUser?.userId) // фильтруем текущего пользователя
+            .map((user) => (
+              <div
+                key={user.userId}
+                onClick={() => handleSelectUser(user)}
+                style={{
+                  cursor: 'pointer',
+                  padding: '10px',
+                  backgroundColor: selectedUser?.userId === user.userId ? '#f0f0f0' : 'white',
+                }}
+              >
+                {user.email}
+              </div>
+            ))
         )}
       </div>
 
@@ -97,7 +96,7 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
               <h2>Chat with {selectedUser.email}</h2>
               {messages.map((msg) => (
                 <div
-                  key={msg.id}
+                  key={msg.id} // уникальный ключ для каждого сообщения
                   style={{
                     textAlign: msg.sender === 'current' ? 'right' : 'left',
                     margin: '10px 0',
