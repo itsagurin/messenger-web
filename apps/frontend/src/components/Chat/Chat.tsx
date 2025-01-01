@@ -24,6 +24,7 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState<string>('');
+  const [hoveredUserId, setHoveredUserId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -31,7 +32,6 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
     const socket = io('http://localhost:4000');
 
     socket.on('users', (data: User[]) => {
-      // Фильтруем список пользователей, исключая текущего пользователя
       const filteredUsers = data.filter(user => user.userId !== currentUser.userId);
       setUsers(filteredUsers);
     });
@@ -43,22 +43,21 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
 
   const handleSelectUser = (user: User) => {
     setSelectedUser(user);
-    setMessages([]);  // очищаем сообщения при выборе нового пользователя
+    setMessages([]);
   };
 
   const handleSendMessage = () => {
     if (!newMessage.trim() || !selectedUser || !currentUser) return;
 
     const newMsg: Message = {
-      id: messages.length + 1,
+      id: Date.now(),
       sender: 'current',
       text: newMessage,
       timestamp: new Date(),
     };
 
-    // Добавляем сообщение в список
     setMessages((prevMessages) => [...prevMessages, newMsg]);
-    setNewMessage('');  // очищаем поле ввода
+    setNewMessage('');
   };
 
   if (!currentUser) {
@@ -72,20 +71,28 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
         {users.length === 0 ? (
           <div>No users available</div>
         ) : (
-          users.filter((user) => user.userId !== currentUser?.userId) // фильтруем текущего пользователя
-            .map((user) => (
-              <div
-                key={user.userId}
-                onClick={() => handleSelectUser(user)}
-                style={{
-                  cursor: 'pointer',
-                  padding: '10px',
-                  backgroundColor: selectedUser?.userId === user.userId ? '#f0f0f0' : 'white',
-                }}
-              >
-                {user.email}
-              </div>
-            ))
+          users.map((user) => (
+            <div
+              key={user.userId}
+              onClick={() => handleSelectUser(user)}
+              onMouseEnter={() => setHoveredUserId(user.userId)}
+              onMouseLeave={() => setHoveredUserId(null)}
+              style={{
+                cursor: 'pointer',
+                padding: '10px',
+                backgroundColor:
+                  selectedUser?.userId === user.userId
+                    ? '#f0f0f0'
+                    : hoveredUserId === user.userId
+                      ? '#f8f8f8'
+                      : 'white',
+                borderRadius: '8px',
+                margin: '5px 0',
+              }}
+            >
+              {user.email}
+            </div>
+          ))
         )}
       </div>
 
@@ -96,7 +103,7 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
               <h2>Chat with {selectedUser.email}</h2>
               {messages.map((msg) => (
                 <div
-                  key={msg.id} // уникальный ключ для каждого сообщения
+                  key={msg.id}
                   style={{
                     textAlign: msg.sender === 'current' ? 'right' : 'left',
                     margin: '10px 0',
@@ -111,6 +118,7 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
                 type="text"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                 placeholder="Type a message..."
                 style={{ flex: 1, padding: '10px', marginRight: '10px' }}
               />
