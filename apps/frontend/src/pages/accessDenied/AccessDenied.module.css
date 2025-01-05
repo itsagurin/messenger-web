@@ -3,9 +3,26 @@
     justify-content: center;
     align-items: center;
     flex-direction: column;
-    gap: 2%;
+    gap: 15px;
     width: 100vw;
     height: 100vh;
     background-color: white;
     z-index: 1000;
+}
+
+.backToHome {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.backToHome:hover {
+    background-color: #45a049;
 }

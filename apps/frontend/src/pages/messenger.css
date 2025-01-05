@@ -5,6 +5,10 @@
     flex-direction: column;
 }
 
+a {
+    text-decoration: none;
+}
+
 .header-block {
     position: fixed;
     top: 0;

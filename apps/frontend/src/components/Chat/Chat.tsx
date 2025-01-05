@@ -4,7 +4,7 @@ import { useUser } from '../../services/userContext';
 import './Chat.css';
 
 interface User {
-  userId: number;
+  id: number;
   email: string;
 }
 
@@ -37,7 +37,7 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
     socket.on('users', (data: User[]) => {
       if (currentUser) {
         const filteredUsers = data.filter(
-          (user) => user.userId !== currentUser.userId
+          (user) => user.id !== currentUser.userId
         );
         setUsers(filteredUsers);
       }
@@ -87,13 +87,13 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
           ) : (
             users.map((user) => (
               <button
-                key={user.userId}
+                key={user.id}
                 onClick={() => handleSelectUser(user)}
-                onMouseEnter={() => setHoveredUserId(user.userId)}
+                onMouseEnter={() => setHoveredUserId(user.id)}
                 onMouseLeave={() => setHoveredUserId(null)}
                 className={`chat-user-button ${
-                  selectedUser?.userId === user.userId ? 'selected' : ''
-                } ${hoveredUserId === user.userId ? 'hovered' : ''}`}
+                  selectedUser?.id === user.id ? 'selected' : ''
+                } ${hoveredUserId === user.id ? 'hovered' : ''}`}
               >
                 {user.email}
               </button>

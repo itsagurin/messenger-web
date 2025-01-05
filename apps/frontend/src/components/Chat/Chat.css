@@ -30,11 +30,11 @@
     padding: 0.75rem 1rem;
     margin: 0.25rem 0;
     text-align: left;
-    background: none;
     border: 1px solid transparent;
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
+    background-color: #fae5e3;
 }
 
 .chat-user-button:hover,
