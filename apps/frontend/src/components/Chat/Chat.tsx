@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import { useUser } from '../../services/userContext';
+import './Chat.css';
 
 interface User {
   userId: number;
@@ -25,21 +26,31 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState<string>('');
   const [hoveredUserId, setHoveredUserId] = useState<number | null>(null);
+  const socketRef = useRef<ReturnType<typeof io> | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || socketRef.current) return;
 
     const socket = io('http://localhost:4000');
 
     socket.on('users', (data: User[]) => {
-      const filteredUsers = data.filter(user => user.userId !== currentUser.userId);
-      setUsers(filteredUsers);
+      if (currentUser) {
+        const filteredUsers = data.filter(
+          (user) => user.userId !== currentUser.userId
+        );
+        setUsers(filteredUsers);
+      }
     });
 
     return () => {
       socket.disconnect();
     };
   }, [currentUser]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const handleSelectUser = (user: User) => {
     setSelectedUser(user);
@@ -61,85 +72,91 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
   };
 
   if (!currentUser) {
-    return <div style={{ color: 'white' }}>Please log in to access the chat</div>;
+    return <div className="chat-login-message">Please log in to access the chat</div>;
   }
 
   return (
-    <div className={className} style={{ display: 'flex', height: '100vh' }}>
-      <div style={{ width: '30%', borderRight: '1px solid #ccc', padding: '10px' }}>
-        <h2>Users</h2>
-        {users.length === 0 ? (
-          <div>No users available</div>
-        ) : (
-          users.map((user) => (
-            <div
-              key={user.userId}
-              onClick={() => handleSelectUser(user)}
-              onMouseEnter={() => setHoveredUserId(user.userId)}
-              onMouseLeave={() => setHoveredUserId(null)}
-              style={{
-                cursor: 'pointer',
-                padding: '10px',
-                backgroundColor:
-                  selectedUser?.userId === user.userId
-                    ? '#f0f0f0'
-                    : hoveredUserId === user.userId
-                      ? '#f8f8f8'
-                      : 'white',
-                borderRadius: '8px',
-                margin: '5px 0',
-              }}
-            >
-              {user.email}
-            </div>
-          ))
-        )}
-      </div>
+    <div className={`chat-layout ${className || ''}`}>
+      <aside className="chat-sidebar">
+        <header className="chat-sidebar-header">
+          <h2>Users</h2>
+        </header>
+        <div className="chat-users-list">
+          {users.length === 0 ? (
+            <div className="chat-no-users">No users available</div>
+          ) : (
+            users.map((user) => (
+              <button
+                key={user.userId}
+                onClick={() => handleSelectUser(user)}
+                onMouseEnter={() => setHoveredUserId(user.userId)}
+                onMouseLeave={() => setHoveredUserId(null)}
+                className={`chat-user-button ${
+                  selectedUser?.userId === user.userId ? 'selected' : ''
+                } ${hoveredUserId === user.userId ? 'hovered' : ''}`}
+              >
+                {user.email}
+              </button>
+            ))
+          )}
+        </div>
+      </aside>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <main className="chat-main">
         {selectedUser ? (
           <>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '10px' }}>
+            <header className="chat-header">
               <h2>Chat with {selectedUser.email}</h2>
+            </header>
+
+            <div className="chat-messages">
               {messages.map((msg) => (
                 <div
                   key={msg.id}
-                  style={{
-                    textAlign: msg.sender === 'current' ? 'right' : 'left',
-                    margin: '10px 0',
-                  }}
+                  className={`chat-message ${msg.sender === 'current' ? 'outgoing' : 'incoming'}`}
                 >
-                  {msg.text}
+                  <div className="chat-message-bubble">
+                    {msg.text}
+                  </div>
+                  <time className="chat-message-time">
+                    {new Date(msg.timestamp).toLocaleTimeString()}
+                  </time>
                 </div>
               ))}
+              <div ref={messagesEndRef} />
             </div>
-            <div style={{ display: 'flex', padding: '10px' }}>
-              <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                placeholder="Type a message..."
-                style={{ flex: 1, padding: '10px', marginRight: '10px' }}
-              />
-              <button onClick={handleSendMessage} style={{ padding: '10px' }}>
-                Send
-              </button>
-            </div>
+
+            <footer className="chat-footer">
+              <form
+                className="chat-input-form"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSendMessage();
+                }}
+              >
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="Type a message..."
+                  className="chat-input"
+                />
+                <button
+                  type="submit"
+                  className="chat-send-button"
+                  disabled={!newMessage.trim()}
+                >
+                  Send
+                </button>
+              </form>
+            </footer>
           </>
         ) : (
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              height: '100%',
-            }}
-          >
+          <div className="chat-empty-state">
             Select a user to start chatting
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 };

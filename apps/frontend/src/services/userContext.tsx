@@ -18,7 +18,18 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const storedUser = localStorage.getItem('currentUser');
     if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        if (parsedUser.userId && parsedUser.email) {
+          setCurrentUser((prev) =>
+            prev?.userId === parsedUser.userId ? prev : parsedUser
+          );
+        } else {
+          localStorage.removeItem('currentUser'); // Invalid data
+        }
+      } catch {
+        localStorage.removeItem('currentUser'); // Parsing error
+      }
     }
   }, []);
 
