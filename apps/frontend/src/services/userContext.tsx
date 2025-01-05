@@ -19,11 +19,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const storedUser = localStorage.getItem('currentUser');
     if (storedUser) {
       try {
-        const parsedUser = JSON.parse(storedUser);
+        const parsedUser: User = JSON.parse(storedUser);
         if (parsedUser.userId && parsedUser.email) {
-          setCurrentUser((prev) =>
-            prev?.userId === parsedUser.userId ? prev : parsedUser
-          );
+          setCurrentUser(parsedUser);
         } else {
           localStorage.removeItem('currentUser'); // Invalid data
         }
@@ -39,10 +37,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       localStorage.removeItem('currentUser');
     }
-  }, [currentUser]);
-
-  useEffect(() => {
-    console.log('UserProvider initialized with:', currentUser);
   }, [currentUser]);
 
   return (
