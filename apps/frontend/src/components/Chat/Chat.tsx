@@ -11,8 +11,10 @@ interface User {
 interface Message {
   id: number;
   sender: number | 'current';
+  receiver: number;
   text: string;
   timestamp: Date;
+  status: string; // "sent" or "read"
 }
 
 interface ChatComponentProps {
@@ -36,20 +38,28 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
       query: { User: currentUser.email },
     });
 
-
     socket.on('users', (data: User[]) => {
-      if (currentUser) {
-        const filteredUsers = data.filter(
-          (user) => user.id !== currentUser.userId
-        );
-        setUsers(filteredUsers);
-      }
+      const filteredUsers = data.filter(user => user.id !== currentUser.userId);
+      setUsers(filteredUsers);
+    });
+
+    socket.on('newMessage', (message: Message) => {
+      setMessages((prevMessages) => [...prevMessages, message]);
     });
 
     return () => {
       socket.disconnect();
     };
   }, [currentUser]);
+
+  useEffect(() => {
+    if (selectedUser) {
+      // Получаем сообщения из базы данных при выборе пользователя
+      fetch(`http://localhost:4000/messages/${selectedUser.id}`)
+        .then(response => response.json())
+        .then(data => setMessages(data));
+    }
+  }, [selectedUser]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -65,18 +75,19 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
 
     const newMsg: Message = {
       id: Date.now(),
-      sender: 'current',
+      sender: currentUser.userId,
+      receiver: selectedUser.id,
       text: newMessage,
       timestamp: new Date(),
+      status: 'sent',
     };
+
+    // Отправляем сообщение через сокет
+    socketRef.current?.emit('sendMessage', newMsg);
 
     setMessages((prevMessages) => [...prevMessages, newMsg]);
     setNewMessage('');
   };
-
-  if (!currentUser) {
-    return <div className="chat-login-message">Please log in to access the chat</div>;
-  }
 
   return (
     <div className={`chat-layout ${className || ''}`}>

@@ -14,24 +14,28 @@ datasource db {
 }
 
 model User {
-  id           Int       @id @default(autoincrement())
-  email        String    @unique
-  password     String
-  refreshToken String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  messages     Message[]
+  id               Int       @id @default(autoincrement())
+  email            String    @unique
+  password         String
+  refreshToken     String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  messagesSent     Message[] @relation("SentMessages")
+  messagesReceived Message[] @relation("ReceivedMessages")
 
   @@map("users")
 }
 
 model Message {
-  id        Int      @id @default(autoincrement())
-  senderId  Int
-  text      String
-  createdAt DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  senderId   Int
+  receiverId Int
+  text       String
+  createdAt  DateTime @default(now())
+  status     String   @default("sent") // "sent", "read"
 
-  sender User @relation(fields: [senderId], references: [id])
+  sender   User @relation("SentMessages", fields: [senderId], references: [id])
+  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id])
 
   @@map("message")
 }
