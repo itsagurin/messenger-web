@@ -30,7 +30,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
       if (result.success) {
         authService.setTokens(result.accessToken, result.refreshToken);
 
-        // Преобразуем данные в формат User
         setCurrentUser({ userId: result.data.userId, email: result.data.email });
         navigate('/main');
 

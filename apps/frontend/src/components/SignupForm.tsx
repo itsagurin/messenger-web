@@ -28,20 +28,16 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
       const result = await authService.register({ email, password });
 
       if (result.success) {
-        // Сохраняем токены в authService или localStorage
         authService.setTokens(result.accessToken, result.refreshToken);
 
-        // Преобразуем данные от API к типу User
         const user = {
           userId: result.data.userId,
           email: result.data.email,
         };
         setCurrentUser(user);
 
-        // Навигация на основную страницу
         navigate('/main');
 
-        // Вызываем коллбэк, если он передан
         if (onSignupSuccess) {
           onSignupSuccess();
         }

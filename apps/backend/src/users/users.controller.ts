@@ -28,10 +28,9 @@ export class UsersController {
       const user = await this.usersService.register(body.email, body.password);
       const tokens = this.generateTokens(user.userId, user.email);
 
-      // Сохраняем refresh token в базе
       await this.usersService.updateRefreshToken(user.userId, tokens.refreshToken);
 
-      await this.usersGateway.updateUsers();
+      await this.usersGateway.handleUserAuth(user.email);
 
       return {
         success: true,
@@ -53,8 +52,9 @@ export class UsersController {
       const user = await this.usersService.login(body.email, body.password);
       const tokens = this.generateTokens(user.userId, user.email);
 
-      // Сохраняем refresh token в базе
       await this.usersService.updateRefreshToken(user.userId, tokens.refreshToken);
+
+      await this.usersGateway.handleUserAuth(user.email);
 
       return {
         success: true,
@@ -73,7 +73,6 @@ export class UsersController {
   @Post('refresh')
   async refresh(@Body() body: { refreshToken: string }) {
     try {
-      // Верифицируем refresh token
       const decoded = this.jwtService.verify(body.refreshToken);
       const user = await this.usersService.findUserByRefreshToken(body.refreshToken);
 
@@ -81,10 +80,8 @@ export class UsersController {
         throw new Error('Invalid refresh token');
       }
 
-      // Генерируем новые токены
       const tokens = this.generateTokens(user.id, user.email);
 
-      // Обновляем refresh token в базе
       await this.usersService.updateRefreshToken(user.id, tokens.refreshToken);
 
       return {

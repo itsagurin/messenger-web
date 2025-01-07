@@ -32,7 +32,10 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
   useEffect(() => {
     if (!currentUser || socketRef.current) return;
 
-    const socket = io('http://localhost:4000');
+    const socket = io('http://localhost:4000', {
+      query: { User: currentUser.email },
+    });
+
 
     socket.on('users', (data: User[]) => {
       if (currentUser) {
