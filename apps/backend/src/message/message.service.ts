@@ -10,7 +10,6 @@ export class MessageService {
   async sendMessage(createMessageDto: CreateMessageDto) {
     const { senderId, receiverId, text } = createMessageDto;
 
-    // Сохраняем сообщение в базе данных
     const message = await this.prisma.message.create({
       data: {
         senderId,
@@ -24,20 +23,20 @@ export class MessageService {
   }
 
   // Получаем все сообщения для пользователя
-  async getMessagesForUser(userId: number) {
+  async getMessagesForUser(currentUserId: number, selectedUserId: number) {
     return this.prisma.message.findMany({
       where: {
         OR: [
-          { senderId: userId },
-          { receiverId: userId },
+          { senderId: currentUserId, receiverId: selectedUserId },
+          { senderId: selectedUserId, receiverId: currentUserId },
         ],
       },
       orderBy: {
         createdAt: 'asc',
       },
       include: {
-        sender: true, // Включаем информацию об отправителе
-        receiver: true, // Включаем информацию о получателе
+        sender: true,
+        receiver: true,
       },
     });
   }
@@ -49,4 +48,14 @@ export class MessageService {
       data: { status: 'read' },
     });
   }
+
+  async getAllMessages() {
+    return this.prisma.message.findMany({
+      include: {
+        sender: true,
+        receiver: true,
+      },
+    });
+  }
+
 }

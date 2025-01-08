@@ -10,11 +10,13 @@ interface User {
 
 interface Message {
   id: number;
-  sender: number | 'current';
-  receiver: number;
+  senderId: number;
+  receiverId: number;
   text: string;
-  timestamp: Date;
-  status: string; // "sent" or "read"
+  createdAt: string;
+  status: string;
+  sender?: User;
+  receiver?: User;
 }
 
 interface ChatComponentProps {
@@ -39,13 +41,20 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
     });
 
     socket.on('users', (data: User[]) => {
-      const filteredUsers = data.filter(user => user.id !== currentUser.userId);
+      const filteredUsers = data
+        .filter(user => user.id !== currentUser.userId)
+        .map(user => ({
+          ...user,
+          id: user.id || -1,
+        }));
       setUsers(filteredUsers);
     });
 
     socket.on('newMessage', (message: Message) => {
-      setMessages((prevMessages) => [...prevMessages, message]);
+      setMessages(prevMessages => Array.isArray(prevMessages) ? [...prevMessages, message] : [message]);
     });
+
+    socketRef.current = socket;
 
     return () => {
       socket.disconnect();
@@ -53,40 +62,47 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
   }, [currentUser]);
 
   useEffect(() => {
-    if (selectedUser) {
-      // Получаем сообщения из базы данных при выборе пользователя
-      fetch(`http://localhost:4000/messages/${selectedUser.id}`)
-        .then(response => response.json())
-        .then(data => setMessages(data));
+    if (selectedUser && currentUser) {
+      fetch(`http://localhost:4000/messages/${currentUser.userId}/${selectedUser.id}`)
+        .then((response) => response.json())
+        .then((data) => setMessages(Array.isArray(data) ? data : []));
     }
-  }, [selectedUser]);
+  }, [selectedUser, currentUser]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const handleSelectUser = (user: User) => {
+    if (selectedUser?.id === user.id) return;
     setSelectedUser(user);
     setMessages([]);
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!newMessage.trim() || !selectedUser || !currentUser) return;
 
-    const newMsg: Message = {
-      id: Date.now(),
-      sender: currentUser.userId,
-      receiver: selectedUser.id,
-      text: newMessage,
-      timestamp: new Date(),
-      status: 'sent',
-    };
+    try {
+      const response = await fetch('http://localhost:4000/messages/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          senderId: currentUser.userId,
+          receiverId: selectedUser.id,
+          text: newMessage,
+        }),
+      });
 
-    // Отправляем сообщение через сокет
-    socketRef.current?.emit('sendMessage', newMsg);
-
-    setMessages((prevMessages) => [...prevMessages, newMsg]);
-    setNewMessage('');
+      const sentMessage = await response.json();
+      setMessages(prevMessages => Array.isArray(prevMessages) ? [...prevMessages, sentMessage] : [sentMessage]);
+      setNewMessage('');
+      socketRef.current?.emit('sendMessage', sentMessage);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+    }
   };
 
   return (
@@ -127,13 +143,11 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
               {messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`chat-message ${msg.sender === 'current' ? 'outgoing' : 'incoming'}`}
+                  className={`chat-message ${msg.senderId === currentUser?.userId ? 'outgoing' : 'incoming'}`}
                 >
-                  <div className="chat-message-bubble">
-                    {msg.text}
-                  </div>
+                  <div className="chat-message-bubble">{msg.text}</div>
                   <time className="chat-message-time">
-                    {new Date(msg.timestamp).toLocaleTimeString()}
+                    {new Date(msg.createdAt).toLocaleTimeString()}
                   </time>
                 </div>
               ))}
@@ -143,10 +157,7 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
             <footer className="chat-footer">
               <form
                 className="chat-input-form"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSendMessage();
-                }}
+                onSubmit={handleSendMessage}
               >
                 <input
                   type="text"
