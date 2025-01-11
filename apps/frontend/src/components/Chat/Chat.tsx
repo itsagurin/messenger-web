@@ -58,11 +58,9 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
     };
   }, [currentUser]);
 
-  // ws new test
   useEffect(() => {
     if (!socketRef.current || !selectedUser || !currentUser) return;
 
-    // Обработка входящих сообщений
     const handleNewMessage = (message: Message) => {
       setMessages(prevMessages => {
         if (
@@ -85,7 +83,6 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
     };
   }, [selectedUser, currentUser]);
 
-  // Загрузка истории сообщений при выборе пользователя
   useEffect(() => {
     if (selectedUser && currentUser) {
       fetch(`http://localhost:4000/messages/${currentUser.userId}/${selectedUser.id}`)
@@ -94,7 +91,6 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
     }
   }, [selectedUser, currentUser]);
 
-  // Автопрокрутка к последнему сообщению
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
