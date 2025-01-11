@@ -33,6 +33,7 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
   const socketRef = useRef<ReturnType<typeof io> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // WebSocket init
   useEffect(() => {
     if (!currentUser || socketRef.current) return;
 
@@ -50,10 +51,6 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
       setUsers(filteredUsers);
     });
 
-    socket.on('newMessage', (message: Message) => {
-      setMessages(prevMessages => Array.isArray(prevMessages) ? [...prevMessages, message] : [message]);
-    });
-
     socketRef.current = socket;
 
     return () => {
@@ -61,6 +58,34 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
     };
   }, [currentUser]);
 
+  // ws new test
+  useEffect(() => {
+    if (!socketRef.current || !selectedUser || !currentUser) return;
+
+    // Обработка входящих сообщений
+    const handleNewMessage = (message: Message) => {
+      setMessages(prevMessages => {
+        if (
+          (message.senderId === selectedUser?.id && message.receiverId === currentUser.userId) ||
+          (message.senderId === currentUser.userId && message.receiverId === selectedUser?.id)
+        ) {
+          const messageExists = prevMessages.some(msg => msg.id === message.id);
+          if (!messageExists) {
+            return [...prevMessages, message];
+          }
+        }
+        return prevMessages;
+      });
+    };
+
+    socketRef.current.on('newMessage', handleNewMessage);
+
+    return () => {
+      socketRef.current?.off('newMessage', handleNewMessage);
+    };
+  }, [selectedUser, currentUser]);
+
+  // Загрузка истории сообщений при выборе пользователя
   useEffect(() => {
     if (selectedUser && currentUser) {
       fetch(`http://localhost:4000/messages/${currentUser.userId}/${selectedUser.id}`)
@@ -69,6 +94,7 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
     }
   }, [selectedUser, currentUser]);
 
+  // Автопрокрутка к последнему сообщению
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -84,22 +110,32 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
     if (!newMessage.trim() || !selectedUser || !currentUser) return;
 
     try {
+      // Создаем объект сообщения
+      const messageData = {
+        senderId: currentUser.userId,
+        receiverId: selectedUser.id,
+        text: newMessage,
+      };
+
+      // Отправляем сообщение на сервер для сохранения
       const response = await fetch('http://localhost:4000/messages/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          senderId: currentUser.userId,
-          receiverId: selectedUser.id,
-          text: newMessage,
-        }),
+        body: JSON.stringify(messageData),
       });
 
       const sentMessage = await response.json();
-      setMessages(prevMessages => Array.isArray(prevMessages) ? [...prevMessages, sentMessage] : [sentMessage]);
-      setNewMessage('');
+
+      // Добавляем сообщение в локальный state
+      setMessages(prevMessages => [...prevMessages, sentMessage]);
+
+      // Отправляем сообщение через WebSocket
       socketRef.current?.emit('sendMessage', sentMessage);
+
+      // Очищаем поле ввода
+      setNewMessage('');
     } catch (error) {
       console.error('Failed to send message:', error);
     }

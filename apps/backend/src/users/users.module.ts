@@ -6,6 +6,7 @@ import { UsersGateway } from "../websocket/wsgateway";
 import { JwtStrategy } from '../auth/jwt.strategy';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { MessageService } from '../message/message.service';
 
 @Module({
   imports: [
@@ -16,7 +17,8 @@ import { PassportModule } from '@nestjs/passport';
     }),
   ],
   controllers: [UsersController],
-  providers: [UsersService, PrismaService, UsersGateway, JwtStrategy],
+  providers: [UsersService, PrismaService, UsersGateway, MessageService, JwtStrategy],
+  exports: [UsersService],
 })
 
 export class UsersModule implements NestModule {

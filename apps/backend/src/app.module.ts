@@ -4,6 +4,7 @@ import { APP_FILTER } from '@nestjs/core';
 import { HttpExceptionFilter } from "./http-exception.filter";
 import { CorsMiddleware } from './users/users.service';
 import { MessageModule } from './message/message.module';
+import { PrismaService } from './prisma.service';
 
 @Module({
   imports: [UsersModule, MessageModule],
@@ -11,7 +12,8 @@ import { MessageModule } from './message/message.module';
     {
       provide: APP_FILTER,
       useClass: HttpExceptionFilter
-    }
+    },
+    PrismaService,
   ]
 })
 export class AppModule {
@@ -19,4 +21,3 @@ export class AppModule {
     consumer.apply(CorsMiddleware).forRoutes('*');
   }
 }
-

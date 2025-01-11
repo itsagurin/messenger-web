@@ -6,7 +6,6 @@ import { CreateMessageDto } from './dto/create-message.dto';
 export class MessageService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // Отправка сообщения
   async sendMessage(createMessageDto: CreateMessageDto) {
     const { senderId, receiverId, text } = createMessageDto;
 
@@ -41,7 +40,6 @@ export class MessageService {
     });
   }
 
-  // Обновляем статус сообщения на "прочитано"
   async markMessageAsRead(messageId: number) {
     return this.prisma.message.update({
       where: { id: messageId },

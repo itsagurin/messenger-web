@@ -4,9 +4,21 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
   ConnectedSocket,
+  SubscribeMessage,
+  MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { UsersService } from '../users/users.service';
+import { MessageService } from '../message/message.service';
+
+interface Message {
+  id: number;
+  senderId: number;
+  receiverId: number;
+  text: string;
+  createdAt: string;
+  status: string;
+}
 
 @WebSocketGateway({ cors: { origin: '*' } })
 export class UsersGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -14,16 +26,24 @@ export class UsersGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server: Server;
 
   private connectedUsers: Map<string, string> = new Map(); // socketId -> email
+  private userSockets: Map<number, string> = new Map(); // userId -> socketId
 
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly messageService: MessageService,
+  ) {}
 
   async handleConnection(@ConnectedSocket() client: Socket) {
-
     const userEmail = client.handshake.query.User;
 
     if (userEmail && typeof userEmail === 'string') {
-
       this.connectedUsers.set(client.id, userEmail);
+
+      // Получаем пользователя по email и сохраняем его socket id
+      const user = await this.usersService.findByEmail(userEmail);
+      if (user) {
+        this.userSockets.set(user.id, client.id);
+      }
 
       console.log('User connected:', userEmail);
 
@@ -37,13 +57,46 @@ export class UsersGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.emit('users', users);
   }
 
-  handleDisconnect(@ConnectedSocket() client: Socket) {
+  async handleDisconnect(@ConnectedSocket() client: Socket) {
     const userEmail = this.connectedUsers.get(client.id);
     if (userEmail) {
       console.log('User disconnected:', userEmail);
       this.connectedUsers.delete(client.id);
 
+      // Удаляем socket id пользователя
+      const user = await this.usersService.findByEmail(userEmail);
+      if (user) {
+        this.userSockets.delete(user.id);
+      }
+
       this.server.emit('userDisconnected', { email: userEmail });
+    }
+  }
+
+  @SubscribeMessage('sendMessage')
+  async handleMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() message: Message,
+  ) {
+    try {
+      // Получаем socket id получателя
+      const receiverSocketId = this.userSockets.get(message.receiverId);
+
+      // Отправляем сообщение всем подключенным сокетам получателя
+      if (receiverSocketId) {
+        this.server.to(receiverSocketId).emit('newMessage', message);
+      }
+
+      // Отправляем сообщение обратно отправителю для подтверждения
+      client.emit('newMessage', message);
+
+      // Обновляем статус сообщения на "прочитано"
+      await this.messageService.markMessageAsRead(message.id);
+
+      return message;
+    } catch (error) {
+      console.error('Error handling message:', error);
+      throw error;
     }
   }
 

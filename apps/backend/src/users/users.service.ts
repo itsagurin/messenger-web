@@ -67,6 +67,12 @@ export class UsersService {
     async deleteAllUsers() {
         return this.prisma.user.deleteMany();
     }
+
+    async findByEmail(email: string) {
+        return this.prisma.user.findUnique({
+            where: { email },
+        });
+    }
 }
 
 @Injectable()
