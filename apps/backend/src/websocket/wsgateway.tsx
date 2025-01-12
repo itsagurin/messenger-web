@@ -63,7 +63,6 @@ export class UsersGateway implements OnGatewayConnection, OnGatewayDisconnect {
       console.log('User disconnected:', userEmail);
       this.connectedUsers.delete(client.id);
 
-      // Удаляем socket id пользователя
       const user = await this.usersService.findByEmail(userEmail);
       if (user) {
         this.userSockets.delete(user.id);
@@ -79,19 +78,15 @@ export class UsersGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() message: Message,
   ) {
     try {
-      // Получаем socket id получателя
       const receiverSocketId = this.userSockets.get(message.receiverId);
 
-      // Отправляем сообщение всем подключенным сокетам получателя
       if (receiverSocketId) {
         this.server.to(receiverSocketId).emit('newMessage', message);
       }
 
-      // Отправляем сообщение обратно отправителю для подтверждения
       client.emit('newMessage', message);
 
-      // Обновляем статус сообщения на "прочитано"
-      await this.messageService.markMessageAsRead(message.id);
+      await this.messageService.markMessagesAsRead(message.senderId, message.receiverId);
 
       return message;
     } catch (error) {

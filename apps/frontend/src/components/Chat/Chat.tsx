@@ -32,6 +32,7 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
   const [hoveredUserId, setHoveredUserId] = useState<number | null>(null);
   const socketRef = useRef<ReturnType<typeof io> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [unreadCounts, setUnreadCounts] = useState<{ [key: number]: number }>({});
 
   // WebSocket init
   useEffect(() => {
@@ -51,12 +52,21 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
       setUsers(filteredUsers);
     });
 
+    socket.on('newMessage', (message: Message) => {
+      if (message.receiverId === currentUser.userId && message.senderId !== selectedUser?.id) {
+        setUnreadCounts(prev => ({
+          ...prev,
+          [message.senderId]: (prev[message.senderId] || 0) + 1
+        }));
+      }
+    });
+
     socketRef.current = socket;
 
     return () => {
       socket.disconnect();
     };
-  }, [currentUser]);
+  }, [currentUser, selectedUser]);
 
   useEffect(() => {
     if (!socketRef.current || !selectedUser || !currentUser) return;
@@ -85,7 +95,7 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
 
   useEffect(() => {
     if (selectedUser && currentUser) {
-      fetch(`http://localhost:4000/messages/${currentUser.userId}/${selectedUser.id}`)
+      fetch(`http://localhost:4000/messages/conversation/${currentUser.userId}/${selectedUser.id}`)
         .then((response) => response.json())
         .then((data) => setMessages(Array.isArray(data) ? data : []));
     }
@@ -95,10 +105,47 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const updateUnreadCounts = () => {
+      fetch(`http://localhost:4000/messages/unread/${currentUser.userId}`)
+        .then(response => response.json())
+        .then(data => {
+          console.log('Received unread counts:', data);
+          setUnreadCounts(data);
+        })
+        .catch(err => console.error('Failed to fetch unread counts:', err));
+    };
+
+    updateUnreadCounts();
+
+    const interval = setInterval(updateUnreadCounts, 10000);
+
+    return () => clearInterval(interval);
+  }, [currentUser]);
+
   const handleSelectUser = (user: User) => {
-    if (selectedUser?.id === user.id) return;
+    if (!currentUser || selectedUser?.id === user.id) return;
+
     setSelectedUser(user);
     setMessages([]);
+
+    fetch(`http://localhost:4000/messages/mark-read/${user.id}/${currentUser.userId}`, {
+      method: 'POST',
+    })
+      .then(() => {
+        setUnreadCounts(prev => ({
+          ...prev,
+          [user.id]: 0
+        }));
+      })
+      .catch(err => console.error('Failed to mark messages as read:', err));
+
+    fetch(`http://localhost:4000/messages/unread/${currentUser.userId}`)
+      .then(response => response.json())
+      .then(data => setUnreadCounts(data))
+      .catch(err => console.error('Failed to fetch unread counts:', err));
   };
 
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -106,14 +153,12 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
     if (!newMessage.trim() || !selectedUser || !currentUser) return;
 
     try {
-      // Создаем объект сообщения
       const messageData = {
         senderId: currentUser.userId,
         receiverId: selectedUser.id,
         text: newMessage,
       };
 
-      // Отправляем сообщение на сервер для сохранения
       const response = await fetch('http://localhost:4000/messages/send', {
         method: 'POST',
         headers: {
@@ -124,13 +169,10 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
 
       const sentMessage = await response.json();
 
-      // Добавляем сообщение в локальный state
       setMessages(prevMessages => [...prevMessages, sentMessage]);
 
-      // Отправляем сообщение через WebSocket
       socketRef.current?.emit('sendMessage', sentMessage);
 
-      // Очищаем поле ввода
       setNewMessage('');
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -158,6 +200,9 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
                 } ${hoveredUserId === user.id ? 'hovered' : ''}`}
               >
                 {user.email}
+                {unreadCounts[user.id] > 0 && (
+                  <span className="unread-indicator">{unreadCounts[user.id]}</span>
+                )}
               </button>
             ))
           )}

@@ -21,7 +21,6 @@ export class MessageService {
     return message;
   }
 
-  // Получаем все сообщения для пользователя
   async getMessagesForUser(currentUserId: number, selectedUserId: number) {
     return this.prisma.message.findMany({
       where: {
@@ -40,11 +39,37 @@ export class MessageService {
     });
   }
 
-  async markMessageAsRead(messageId: number) {
-    return this.prisma.message.update({
-      where: { id: messageId },
-      data: { status: 'read' },
+  async markMessagesAsRead(senderId: number, receiverId: number): Promise<void> {
+    await this.prisma.message.updateMany({
+      where: {
+        senderId,
+        receiverId,
+        status: 'sent',
+      },
+      data: {
+        status: 'read',
+      },
     });
+  }
+
+  async getUnreadCount(receiverId: number): Promise<{ [key: number]: number }> {
+    const messages = await this.prisma.message.groupBy({
+      by: ['senderId'],
+      where: {
+        receiverId,
+        status: 'sent',
+      },
+      _count: {
+        senderId: true,
+      },
+    });
+
+    const unreadCount = messages.reduce((acc, group) => {
+      acc[group.senderId] = group._count.senderId;
+      return acc;
+    }, {} as { [key: number]: number });
+
+    return unreadCount;
   }
 
   async getAllMessages() {
