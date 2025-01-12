@@ -73,6 +73,12 @@ export class UsersService {
             where: { email },
         });
     }
+
+    async deleteCurrentUser(userId: number) {
+        return this.prisma.user.delete({
+            where: { id: userId }
+        });
+    }
 }
 
 @Injectable()

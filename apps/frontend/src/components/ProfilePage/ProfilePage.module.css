@@ -1,0 +1,119 @@
+.container {
+    display: flex;
+    padding: 20px;
+    gap: 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.leftPanel {
+    flex: 1;
+    max-width: 400px;
+}
+
+.rightPanel {
+    flex: 2;
+}
+
+.profileSection {
+    background: #ffffff;
+    padding: 24px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.title {
+    font-size: 24px;
+    margin-bottom: 24px;
+    color: #333;
+}
+
+.emailSection {
+    margin-bottom: 24px;
+}
+
+.emailSection h3 {
+    font-size: 18px;
+    margin-bottom: 12px;
+    color: #555;
+}
+
+.emailPlaceholder {
+    padding: 12px;
+    background: #f5f5f5;
+    border-radius: 4px;
+    min-height: 40px;
+}
+
+.subscriptionControls {
+    margin-bottom: 24px;
+}
+
+.subscriptionControls h3 {
+    font-size: 18px;
+    margin-bottom: 12px;
+    color: #555;
+}
+
+.subscriptionButton,
+.cancelButton {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 8px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.2s;
+}
+
+.subscriptionButton {
+    background-color: #ebc634;
+    color: white;
+}
+
+.subscriptionButton:hover {
+    background-color: #bfa12a;
+}
+
+.cancelButton {
+    background-color: #f44336;
+    color: white;
+}
+
+.cancelButton:hover {
+    background-color: #da190b;
+}
+
+.logoutSection {
+    margin-top: 32px;
+}
+
+.logoutButton {
+    display: inline-block;
+    padding: 12px 24px;
+    background-color: #757575;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.logoutButton:hover {
+    background-color: #616161;
+}
+
+.subscriptionsSection {
+    background: #ffffff;
+    padding: 24px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.subscriptionsPlaceholder {
+    padding: 20px;
+    background: #f5f5f5;
+    border-radius: 4px;
+    text-align: center;
+    color: #666;
+}

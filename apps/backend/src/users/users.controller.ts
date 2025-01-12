@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, UseGuards, Delete } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Delete, Param, Req } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UsersGateway } from '../websocket/wsgateway';
 import { JwtService } from '@nestjs/jwt';
@@ -103,6 +103,25 @@ export class UsersController {
     try {
       return this.usersService.findAll();
     } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
+
+  @Delete('delete-account')
+  @UseGuards(AuthGuard('jwt'))
+  async deleteCurrentUser(@Req() req: any) {
+    const currentUserId = req.user.sub; // ID from JWT
+    try {
+      await this.usersService.deleteCurrentUser(currentUserId);
+      return {
+        success: true,
+        message: 'Your account has been successfully deleted',
+      };
+    } catch (error) {
+      console.error('Delete Account Error:', error);
       return {
         success: false,
         message: error.message,

@@ -9,7 +9,7 @@ interface HeaderBlockProps {
 const HeaderBlock: React.FC<HeaderBlockProps> = ({ className }) => {
   return (
     <header className={`${styles.headerBlock} ${className || ''}`.trim()}>
-      <Link className={styles.a1} to="#">Profile</Link>
+      <Link className={styles.a1} to="../profile">Profile</Link>
       <Link className={styles.a1} to="#">Pricing</Link>
       <Link className={styles.btn} to="/">Log out</Link>
     </header>
