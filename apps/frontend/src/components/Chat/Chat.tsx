@@ -112,7 +112,6 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
       fetch(`http://localhost:4000/messages/unread/${currentUser.userId}`)
         .then(response => response.json())
         .then(data => {
-          console.log('Received unread counts:', data);
           setUnreadCounts(data);
         })
         .catch(err => console.error('Failed to fetch unread counts:', err));

@@ -113,7 +113,7 @@ export class UsersController {
   @Delete('delete-account')
   @UseGuards(AuthGuard('jwt'))
   async deleteCurrentUser(@Req() req: any) {
-    const currentUserId = req.user.sub; // ID from JWT
+    const currentUserId = req.user.userId; // ID from JWT
     try {
       await this.usersService.deleteCurrentUser(currentUserId);
       return {
