@@ -34,12 +34,24 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [unreadCounts, setUnreadCounts] = useState<{ [key: number]: number }>({});
 
-  // WebSocket init
   useEffect(() => {
-    if (!currentUser || socketRef.current) return;
+    if (!currentUser) return;
+
+    if (!currentUser) return;
 
     const socket = io('http://localhost:4000', {
       query: { User: currentUser.email },
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('WebSocket connection error:', error);
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log('WebSocket disconnected:', reason);
     });
 
     socket.on('users', (data: User[]) => {
@@ -64,9 +76,12 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
     socketRef.current = socket;
 
     return () => {
-      socket.disconnect();
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
     };
-  }, [currentUser, selectedUser]);
+  }, [currentUser]);
 
   useEffect(() => {
     if (!socketRef.current || !selectedUser || !currentUser) return;

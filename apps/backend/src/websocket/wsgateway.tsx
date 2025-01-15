@@ -85,9 +85,6 @@ export class UsersGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       client.emit('newMessage', message);
-
-      await this.messageService.markMessagesAsRead(message.senderId, message.receiverId);
-
       return message;
     } catch (error) {
       console.error('Error handling message:', error);
