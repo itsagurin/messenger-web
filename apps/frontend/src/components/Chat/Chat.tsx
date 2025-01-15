@@ -65,7 +65,8 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
     });
 
     socket.on('newMessage', (message: Message) => {
-      if (message.receiverId === currentUser.userId && message.senderId !== selectedUser?.id) {
+      if (message.receiverId === currentUser.userId &&
+        (!selectedUser || message.senderId !== selectedUser.id)) {
         setUnreadCounts(prev => ({
           ...prev,
           [message.senderId]: (prev[message.senderId] || 0) + 1
@@ -127,7 +128,13 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
       fetch(`http://localhost:4000/messages/unread/${currentUser.userId}`)
         .then(response => response.json())
         .then(data => {
-          setUnreadCounts(data);
+          if (selectedUser) {
+            const newData = { ...data };
+            delete newData[selectedUser.id];
+            setUnreadCounts(newData);
+          } else {
+            setUnreadCounts(data);
+          }
         })
         .catch(err => console.error('Failed to fetch unread counts:', err));
     };
@@ -137,7 +144,7 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
     const interval = setInterval(updateUnreadCounts, 10000);
 
     return () => clearInterval(interval);
-  }, [currentUser]);
+  }, [currentUser, selectedUser]);
 
   const handleSelectUser = (user: User) => {
     if (!currentUser || selectedUser?.id === user.id) return;
@@ -145,20 +152,24 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
     setSelectedUser(user);
     setMessages([]);
 
+    setUnreadCounts(prev => {
+      const newCounts = { ...prev };
+      delete newCounts[user.id];
+      return newCounts;
+    });
+
     fetch(`http://localhost:4000/messages/mark-read/${user.id}/${currentUser.userId}`, {
       method: 'POST',
     })
-      .then(() => {
-        setUnreadCounts(prev => ({
-          ...prev,
-          [user.id]: 0
-        }));
-      })
       .catch(err => console.error('Failed to mark messages as read:', err));
 
     fetch(`http://localhost:4000/messages/unread/${currentUser.userId}`)
       .then(response => response.json())
-      .then(data => setUnreadCounts(data))
+      .then(data => {
+        const newData = { ...data };
+        delete newData[user.id];
+        setUnreadCounts(newData);
+      })
       .catch(err => console.error('Failed to fetch unread counts:', err));
   };
 
@@ -214,7 +225,7 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
                 } ${hoveredUserId === user.id ? 'hovered' : ''}`}
               >
                 {user.email}
-                {unreadCounts[user.id] > 0 && (
+                {unreadCounts[user.id] > 0 && selectedUser?.id !== user.id && (
                   <span className="unread-indicator">{unreadCounts[user.id]}</span>
                 )}
               </button>
