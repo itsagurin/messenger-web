@@ -1,0 +1,248 @@
+.plans-page-wrapper {
+    padding: 20px;
+    background: #f2f6f9;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.plans-header {
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 20px 0;
+    position: relative;
+}
+
+.plans-header h1 {
+    text-align: center;
+    color: rgb(44, 62, 80);
+    font-size: 2rem;
+    margin: 20px 0;
+}
+
+.back-button {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: rgb(44, 62, 80);
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: background-color 0.3s;
+}
+
+.back-button:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.current-plan-badge {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: #ffd700;
+    padding: 5px 10px;
+    border-radius: 12px;
+    color: rgb(44, 62, 80);
+    font-weight: bold;
+    font-size: .85rem;
+}
+
+.con-items {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    background: #f2f6f9;
+
+    --primary: 25,91,255;
+    --color: 44, 62, 80;
+    --bg: 255, 255, 255;
+    --red: 255, 0, 78;
+}
+
+.item {
+    width: 360px;
+    background: #fff;
+    box-shadow: 0px 5px 30px 0px rgba(0,0,0,.05);
+    border-radius: 40px;
+    margin: 0px;
+    padding: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    transition: all .25s ease;
+    position: relative;
+}
+
+.item:not(.color):hover {
+    transform: scale(1.05);
+}
+
+.item:hover .con-img {
+    transform: scale(1.15);
+}
+
+.item.color:hover {
+    transform: scale(1.15);
+}
+
+.con-img {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .25s ease;
+}
+
+.con-img img {
+    width: 130px;
+}
+
+.item1 {
+    padding-right: 45px;
+}
+
+.item2 {
+    z-index: 100;
+}
+
+.item3 {
+    padding-left: 45px;
+}
+
+.item.color {
+    background: #3dcbab;
+    color: #fff;
+    transform: scale(1.1);
+}
+
+.item.color li {
+    color: rgba(255,255,255,.75);
+}
+
+.item.color li b {
+    color: rgba(255,255,255,1);
+}
+
+.item.color li svg {
+    color: rgba(255,255,255,1);
+}
+
+.item header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    position: relative;
+    width: 100%;
+}
+
+.item header h3 {
+    font-size: 2rem;
+}
+
+.item header p {
+    font-size: 1.2rem;
+}
+
+.item b {
+    padding: 0px 4px;
+    display: inline-block;
+}
+
+.badge {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: #fff;
+    padding: 5px 10px;
+    border-radius: 12px;
+    color: rgb(61, 203, 171);
+    font-weight: bold;
+    font-size: .85rem;
+}
+
+.item ul {
+    padding: 20px 0px;
+    flex: 1;
+    width: 100%;
+    list-style: none;
+}
+
+.item ul li {
+    width: 100%;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    text-align: left;
+    color: rgba(44, 62, 80, 0.5);
+}
+
+.item ul li b {
+    color: rgb(44, 62, 80);
+}
+
+.item ul li svg {
+    font-size: 1.6rem;
+    margin-right: 15px;
+    color: rgb(44, 62, 80);
+}
+
+.item button {
+    padding: 14px 20px;
+    width: 100%;
+    background: rgb(61, 203, 171);
+    border: 3px solid transparent;
+    border-radius: 20px;
+    color: #fff;
+    font-weight: bold;
+    font-size: 1.1rem;
+    box-shadow: 0px 10px 25px 0px rgba(61, 203, 171, .35);
+    cursor: pointer;
+    transition: all .25s ease;
+}
+
+.item button:not(.border):hover {
+    transform: translate(0,5px);
+    box-shadow: 0px 0px 0px 0px rgba(61, 203, 171, .35);
+}
+
+.item button.border {
+    border: 3px solid #fff;
+}
+
+.item button.border:hover {
+    background: #fff;
+    color: rgb(61, 203, 171);
+}
+
+.item button.current {
+    background: #cccccc;
+    cursor: not-allowed;
+    box-shadow: none;
+    opacity: 0.7;
+}
+
+.item button.current:hover {
+    transform: none;
+    box-shadow: none;
+    background: #cccccc;
+    color: #fff;
+}
+
+.item.color button.current {
+    background: rgba(255, 255, 255, 0.3);
+    border: 3px solid rgba(255, 255, 255, 0.5);
+}
+
+.item.color button.current:hover {
+    background: rgba(255, 255, 255, 0.3);
+    color: #fff;
+}

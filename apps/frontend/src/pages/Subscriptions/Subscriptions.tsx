@@ -1,11 +1,13 @@
 import React from 'react';
 import { UserProvider } from '../../services/userContext.tsx';
+import './Subscriptions.css';
+import PlansPage from '../../components/PlansPage/PlansPage.tsx';
 
 const Subscriptions: React.FC = () => {
   return (
     <UserProvider>
       <div id="root">
-        <h2>Test</h2>
+        <PlansPage className="PlansStyles"/>
       </div>
     </UserProvider>
   );

@@ -17,7 +17,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ className }) => {
     if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
       setIsDeleting(true);
       try {
-        // Получаем токен через authService
         const token = authService.getAccessToken();
 
         if (!token) {
@@ -35,9 +34,8 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ className }) => {
         const data = await response.json();
 
         if (data.success) {
-          // Очищаем все данные пользователя
           authService.clearTokens();
-          setCurrentUser(null); // Очищаем контекст пользователя
+          setCurrentUser(null);
           navigate('/');
         } else {
           alert(data.message || 'Failed to delete account');
