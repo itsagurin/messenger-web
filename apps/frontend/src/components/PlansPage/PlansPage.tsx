@@ -84,7 +84,7 @@ const PlansPage: React.FC<PlansPageProps> = ({ className }) => {
               </h3>
               <p>
                 <b>
-                  {plan.price}€ / user
+                  {plan.price}$ / user
                 </b>
               </p>
             </header>

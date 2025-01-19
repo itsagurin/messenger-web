@@ -5,9 +5,10 @@ import { HttpExceptionFilter } from "./http-exception.filter";
 import { CorsMiddleware } from './users/users.service';
 import { MessageModule } from './message/message.module';
 import { PrismaService } from './prisma.service';
+import { PaymentModule } from './payment/payment.module';
 
 @Module({
-  imports: [UsersModule, MessageModule],
+  imports: [UsersModule, MessageModule, PaymentModule],
   providers: [
     {
       provide: APP_FILTER,
