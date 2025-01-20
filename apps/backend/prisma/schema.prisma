@@ -14,14 +14,15 @@ datasource db {
 }
 
 model User {
-  id               Int       @id @default(autoincrement())
-  email            String    @unique
+  id               Int           @id @default(autoincrement())
+  email            String        @unique
   password         String
   refreshToken     String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  messagesSent     Message[] @relation("SentMessages")
-  messagesReceived Message[] @relation("ReceivedMessages")
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  messagesSent     Message[]     @relation("SentMessages")
+  messagesReceived Message[]     @relation("ReceivedMessages")
+  subscription     Subscription?
 
   @@map("users")
 }
@@ -38,4 +39,32 @@ model Message {
   receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id])
 
   @@map("message")
+}
+
+enum PlanType {
+  BASIC
+  PLUS
+  PREMIUM
+}
+
+enum SubStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  UNPAID
+  INCOMPLETE
+}
+
+model Subscription {
+  id                   Int       @id @default(autoincrement())
+  userId               Int       @unique
+  user                 User      @relation(fields: [userId], references: [id])
+  planType             PlanType  @default(BASIC)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  status               SubStatus @default(ACTIVE)
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 }

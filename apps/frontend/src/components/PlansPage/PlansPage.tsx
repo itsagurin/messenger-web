@@ -2,6 +2,7 @@ import React from 'react';
 import { Check, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import './PlansPage.css';
+import { useSubscription } from '../../contexts/SubscriptionContext.tsx';
 
 interface PlanFeature {
   prefix?: string;
@@ -52,6 +53,13 @@ interface PlansPageProps {
 }
 
 const PlansPage: React.FC<PlansPageProps> = ({ className }) => {
+  const { currentPlan, isLoading, subscribe } = useSubscription();
+
+  const handleSubscribe = async (planType: string) => {
+    if (isLoading) return;
+    await subscribe(planType);
+  };
+
   return (
     <div className="plans-page-wrapper">
       <div className="plans-header">
@@ -98,9 +106,10 @@ const PlansPage: React.FC<PlansPageProps> = ({ className }) => {
             </ul>
             <button
               className={`${plan.isPopular ? 'border' : ''} ${plan.isCurrent ? 'current' : ''}`}
-              disabled={plan.isCurrent}
+              disabled={isLoading || plan.isCurrent}
+              onClick={() => handleSubscribe(index === 0 ? 'BASIC' : index === 1 ? 'PLUS' : 'PREMIUM')}
             >
-              {plan.isCurrent ? 'Your Current Plan' : 'Choose Plan'}
+              {isLoading ? 'Processing...' : plan.isCurrent ? 'Your Current Plan' : 'Choose Plan'}
             </button>
           </div>
         ))}
