@@ -1,8 +1,11 @@
 import React from 'react';
 import { Check, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import './PlansPage.css';
 import { useSubscription } from '../../contexts/SubscriptionContext.tsx';
+
+type PlanType = 'BASIC' | 'PLUS' | 'PREMIUM';
 
 interface PlanFeature {
   prefix?: string;
@@ -17,7 +20,7 @@ interface SubscriptionPlan {
   isCurrent?: boolean;
 }
 
-const getPlanType = (index: number) => {
+const getPlanType = (index: number): PlanType => {
   switch (index) {
     case 0: return 'BASIC';
     case 1: return 'PLUS';
@@ -26,8 +29,22 @@ const getPlanType = (index: number) => {
   }
 };
 
+interface PlansPageProps {
+  className?: string;
+}
+
 const PlansPage: React.FC<PlansPageProps> = ({ className }) => {
-  const { currentPlan, isLoading, subscribe } = useSubscription();
+  const { currentPlan, isLoading, error, subscribe } = useSubscription();
+
+  const handleSubscribe = async (planType: PlanType) => {
+    if (isLoading) return;
+    try {
+      await subscribe(planType);
+      toast.success(`Successfully subscribed to ${planType} plan!`);
+    } catch (err) {
+      toast.error(error || 'Failed to subscribe. Please try again.');
+    }
+  };
 
   const subscriptionPlans: SubscriptionPlan[] = [
     {
@@ -59,11 +76,6 @@ const PlansPage: React.FC<PlansPageProps> = ({ className }) => {
       ],
     },
   ];
-
-  const handleSubscribe = async (planType: string) => {
-    if (isLoading) return;
-    await subscribe(planType);
-  };
 
   return (
     <div className="plans-page-wrapper">
@@ -122,9 +134,5 @@ const PlansPage: React.FC<PlansPageProps> = ({ className }) => {
     </div>
   );
 };
-
-interface PlansPageProps {
-  className?: string;
-}
 
 export default PlansPage;
