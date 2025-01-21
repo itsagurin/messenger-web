@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 
-const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
+// Use a direct string for the publishable key or import from environment
+const stripePromise = loadStripe(import.meta.env.STRIPE_PUBLISHABLE_KEY || '');
 
 interface SubscriptionContextType {
   currentPlan: string;
@@ -9,9 +10,20 @@ interface SubscriptionContextType {
   subscribe: (planType: string) => Promise<void>;
 }
 
-const SubscriptionContext = createContext<SubscriptionContextType>(null);
+// Provide default values for the context
+const defaultContextValue: SubscriptionContextType = {
+  currentPlan: 'BASIC',
+  isLoading: false,
+  subscribe: async () => {},
+};
 
-export const SubscriptionProvider: React.FC = ({ children }) => {
+const SubscriptionContext = createContext<SubscriptionContextType>(defaultContextValue);
+
+interface SubscriptionProviderProps {
+  children: ReactNode;
+}
+
+export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ children }) => {
   const [currentPlan, setCurrentPlan] = useState('BASIC');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -30,6 +42,10 @@ export const SubscriptionProvider: React.FC = ({ children }) => {
 
       if (data.clientSecret) {
         const stripe = await stripePromise;
+        if (!stripe) {
+          throw new Error('Stripe failed to load');
+        }
+
         const result = await stripe.confirmCardPayment(data.clientSecret);
 
         if (result.error) {

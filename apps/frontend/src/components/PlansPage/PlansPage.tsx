@@ -17,43 +17,48 @@ interface SubscriptionPlan {
   isCurrent?: boolean;
 }
 
-const subscriptionPlans: SubscriptionPlan[] = [
-  {
-    price: 0,
-    isCurrent: true,
-    features: [
-      { prefix: 'Get started with ', bold: 'messaging' },
-      { prefix: 'Flexible ', bold: 'team meeting' },
-      { bold: '5 TB', suffix: ' cloud storage' },
-    ],
-  },
-  {
-    price: 5,
-    isCurrent: false,
-    isPopular: true,
-    features: [
-      { prefix: 'All features in ', bold: 'Basic' },
-      { prefix: 'Flexible ', bold: 'message scheduling' },
-      { bold: '15 TB', suffix: ' cloud storage' },
-    ],
-  },
-  {
-    price: 10,
-    isCurrent: false,
-    features: [
-      { prefix: 'All features in ', bold: 'Plus' },
-      { prefix: 'Special ', bold: 'emoji' },
-      { bold: 'Unlimited', suffix: ' cloud storage' },
-    ],
-  },
-];
-
-interface PlansPageProps {
-  className?: string;
-}
+const getPlanType = (index: number) => {
+  switch (index) {
+    case 0: return 'BASIC';
+    case 1: return 'PLUS';
+    case 2: return 'PREMIUM';
+    default: return 'BASIC';
+  }
+};
 
 const PlansPage: React.FC<PlansPageProps> = ({ className }) => {
   const { currentPlan, isLoading, subscribe } = useSubscription();
+
+  const subscriptionPlans: SubscriptionPlan[] = [
+    {
+      price: 0,
+      isCurrent: currentPlan === 'BASIC',
+      features: [
+        { prefix: 'Get started with ', bold: 'messaging' },
+        { prefix: 'Flexible ', bold: 'team meeting' },
+        { bold: '5 TB', suffix: ' cloud storage' },
+      ],
+    },
+    {
+      price: 5,
+      isCurrent: currentPlan === 'PLUS',
+      isPopular: true,
+      features: [
+        { prefix: 'All features in ', bold: 'Basic' },
+        { prefix: 'Flexible ', bold: 'message scheduling' },
+        { bold: '15 TB', suffix: ' cloud storage' },
+      ],
+    },
+    {
+      price: 10,
+      isCurrent: currentPlan === 'PREMIUM',
+      features: [
+        { prefix: 'All features in ', bold: 'Plus' },
+        { prefix: 'Special ', bold: 'emoji' },
+        { bold: 'Unlimited', suffix: ' cloud storage' },
+      ],
+    },
+  ];
 
   const handleSubscribe = async (planType: string) => {
     if (isLoading) return;
@@ -107,7 +112,7 @@ const PlansPage: React.FC<PlansPageProps> = ({ className }) => {
             <button
               className={`${plan.isPopular ? 'border' : ''} ${plan.isCurrent ? 'current' : ''}`}
               disabled={isLoading || plan.isCurrent}
-              onClick={() => handleSubscribe(index === 0 ? 'BASIC' : index === 1 ? 'PLUS' : 'PREMIUM')}
+              onClick={() => handleSubscribe(getPlanType(index))}
             >
               {isLoading ? 'Processing...' : plan.isCurrent ? 'Your Current Plan' : 'Choose Plan'}
             </button>
@@ -117,5 +122,9 @@ const PlansPage: React.FC<PlansPageProps> = ({ className }) => {
     </div>
   );
 };
+
+interface PlansPageProps {
+  className?: string;
+}
 
 export default PlansPage;

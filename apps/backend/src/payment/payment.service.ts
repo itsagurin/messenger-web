@@ -5,6 +5,13 @@ import { ConfigService } from '@nestjs/config';
 import { PlanType, User } from '@prisma/client';
 import { SUBSCRIPTION_PLANS } from './constants/plans.constant';
 
+type SubscriptionStatus = 'ACTIVE' | 'CANCELED' | 'INCOMPLETE' | 'PAST_DUE' | 'UNPAID';
+
+interface ExtendedUser extends User {
+  stripeCustomerId?: string;
+  name?: string;
+}
+
 @Injectable()
 export class PaymentService {
   private stripe: Stripe;
@@ -19,19 +26,21 @@ export class PaymentService {
     });
   }
 
-  async createCustomerIfNotExists(user: User) {
+  async createCustomerIfNotExists(user: ExtendedUser) {
     if (!user.stripeCustomerId) {
       const customer = await this.stripe.customers.create({
         email: user.email,
-        name: user.name,
+        name: user.name || undefined,
         metadata: {
-          userId: user.id,
+          userId: user.id.toString(),
         },
       });
 
       await this.prisma.user.update({
         where: { id: user.id },
-        data: { stripeCustomerId: customer.id },
+        data: {
+          stripeCustomerId: customer.id,
+        } as any,
       });
 
       return customer.id;
@@ -39,15 +48,14 @@ export class PaymentService {
     return user.stripeCustomerId;
   }
 
-  async createSubscription(userId: string, planType: PlanType) {
+  async createSubscription(userId: number, planType: PlanType) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-    });
+    }) as ExtendedUser;
 
     const customerId = await this.createCustomerIfNotExists(user);
     const plan = SUBSCRIPTION_PLANS[planType];
 
-    // Если это бесплатный план
     if (planType === 'BASIC') {
       await this.prisma.subscription.upsert({
         where: { userId },
@@ -71,6 +79,9 @@ export class PaymentService {
       expand: ['latest_invoice.payment_intent'],
     });
 
+    const invoice = subscription.latest_invoice as Stripe.Invoice;
+    const paymentIntent = invoice.payment_intent as Stripe.PaymentIntent;
+
     await this.prisma.subscription.upsert({
       where: { userId },
       create: {
@@ -88,7 +99,7 @@ export class PaymentService {
 
     return {
       subscriptionId: subscription.id,
-      clientSecret: subscription.latest_invoice.payment_intent.client_secret,
+      clientSecret: paymentIntent.client_secret,
     };
   }
 
@@ -115,7 +126,9 @@ export class PaymentService {
 
   private async handleSubscriptionUpdate(stripeSubscription: Stripe.Subscription) {
     const user = await this.prisma.user.findFirst({
-      where: { stripeCustomerId: stripeSubscription.customer as string },
+      where: {
+        stripeCustomerId: stripeSubscription.customer as string,
+      } as any,
     });
 
     if (!user) return;
@@ -130,8 +143,8 @@ export class PaymentService {
     });
   }
 
-  private mapStripeStatus(stripeStatus: string): SubStatus {
-    const statusMap = {
+  private mapStripeStatus(stripeStatus: string): SubscriptionStatus {
+    const statusMap: Record<string, SubscriptionStatus> = {
       active: 'ACTIVE',
       canceled: 'CANCELED',
       incomplete: 'INCOMPLETE',

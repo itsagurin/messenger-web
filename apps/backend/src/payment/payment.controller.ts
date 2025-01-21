@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Req, Headers } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Req, Headers, RawBodyRequest } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { JwtStrategy } from '../auth/jwt.strategy';
 import { CreateSubscriptionDto } from './dto/subscription.dto';
