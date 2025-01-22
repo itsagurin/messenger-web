@@ -41,20 +41,6 @@ model Message {
   @@map("message")
 }
 
-enum PlanType {
-  BASIC
-  PLUS
-  PREMIUM
-}
-
-enum SubStatus {
-  ACTIVE
-  CANCELED
-  PAST_DUE
-  UNPAID
-  INCOMPLETE
-}
-
 model Subscription {
   id                   Int       @id @default(autoincrement())
   userId               Int       @unique
@@ -67,4 +53,18 @@ model Subscription {
   currentPeriodEnd     DateTime?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
+}
+
+enum PlanType {
+  BASIC
+  PLUS
+  PREMIUM
+}
+
+enum SubStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  UNPAID
+  INCOMPLETE
 }

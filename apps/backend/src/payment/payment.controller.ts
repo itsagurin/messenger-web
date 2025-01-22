@@ -1,26 +1,26 @@
-import { Controller, Post, Body, UseGuards, Req, Headers, RawBodyRequest } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Req, Headers } from '@nestjs/common';
 import { PaymentService } from './payment.service';
-import { JwtStrategy } from '../auth/jwt.strategy';
 import { CreateSubscriptionDto } from './dto/subscription.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('payment')
 export class PaymentController {
   constructor(private paymentService: PaymentService) {}
 
   @Post('create-subscription')
-  @UseGuards(JwtStrategy)
+  @UseGuards(JwtAuthGuard)
   async createSubscription(
     @Req() req,
     @Body() dto: CreateSubscriptionDto,
   ) {
-    return this.paymentService.createSubscription(req.user.id, dto.planType);
+    return this.paymentService.createSubscription(req.user.userId, dto.planType);
   }
 
   @Post('webhook')
   async handleWebhook(
     @Headers('stripe-signature') signature: string,
-    @Req() request: RawBodyRequest<Request>,
+    @Req() request,
   ) {
-    return this.paymentService.handleWebhook(signature, request.rawBody);
+    return this.paymentService.handleWebhook(signature, request.body);
   }
 }
