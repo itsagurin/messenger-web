@@ -20,6 +20,10 @@ export class PaymentService {
   }
 
   async createSubscription(userId: number, planType: PlanType) {
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { subscription: true },
@@ -27,7 +31,6 @@ export class PaymentService {
 
     if (!user) throw new Error('User not found');
 
-    // Create or get Stripe customer
     let stripeCustomerId = user.subscription?.stripeCustomerId;
     if (!stripeCustomerId) {
       const customer = await this.stripe.customers.create({
@@ -37,7 +40,6 @@ export class PaymentService {
       stripeCustomerId = customer.id;
     }
 
-    // For BASIC plan, just create a database record
     if (planType === PlanType.BASIC) {
       await this.prisma.subscription.upsert({
         where: { userId: user.id },
@@ -56,7 +58,6 @@ export class PaymentService {
       return { success: true };
     }
 
-    // Create Stripe Checkout Session for paid plans
     const session = await this.stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       mode: 'subscription',
@@ -69,7 +70,6 @@ export class PaymentService {
       cancel_url: `${this.config.get('FRONTEND_URL')}/payment/cancel`,
     });
 
-    // Update subscription record
     await this.prisma.subscription.upsert({
       where: { userId: user.id },
       create: {
@@ -95,11 +95,17 @@ export class PaymentService {
     const webhookSecret = this.config.get('STRIPE_WEBHOOK_SECRET');
 
     try {
+      console.log('Signature:', signature);
+      console.log('Payload:', payload.toString());
+
       const event = this.stripe.webhooks.constructEvent(
         payload,
         signature,
         webhookSecret
       );
+
+      console.log('Event type:', event.type);
+      console.log('Event data:', JSON.stringify(event.data));
 
       switch (event.type) {
         case 'checkout.session.completed': {
@@ -121,7 +127,7 @@ export class PaymentService {
 
       return { received: true };
     } catch (err) {
-      this.logger.error(`Webhook error: ${err.message}`);
+      console.error('Webhook error details:', err);
       throw err;
     }
   }

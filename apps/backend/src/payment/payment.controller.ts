@@ -1,26 +1,48 @@
-import { Controller, Post, Body, UseGuards, Req, Headers } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Req,
+  Headers,
+  ValidationPipe,
+  UsePipes,
+  RawBodyRequest,
+} from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { CreateSubscriptionDto } from './dto/subscription.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { JwtStrategy } from '../auth/jwt.strategy';
 
 @Controller('payment')
+@UsePipes(
+  new ValidationPipe({
+    transform: true,
+    whitelist: true,
+    forbidNonWhitelisted: true,
+  }),
+)
 export class PaymentController {
   constructor(private paymentService: PaymentService) {}
 
   @Post('create-subscription')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtStrategy)
   async createSubscription(
-    @Req() req,
     @Body() dto: CreateSubscriptionDto,
   ) {
-    return this.paymentService.createSubscription(req.user.userId, dto.planType);
+    console.log('Received DTO:', dto);
+    return this.paymentService.createSubscription(dto.userId, dto.planType);
   }
 
   @Post('webhook')
   async handleWebhook(
     @Headers('stripe-signature') signature: string,
-    @Req() request,
+    @Req() req: RawBodyRequest<Request>,
   ) {
-    return this.paymentService.handleWebhook(signature, request.body);
+    console.log('Incoming webhook:', {
+      signature,
+      body: req.body
+    });
+    const rawBody = Buffer.from(JSON.stringify(req.body));
+    return this.paymentService.handleWebhook(signature, rawBody);
   }
 }
