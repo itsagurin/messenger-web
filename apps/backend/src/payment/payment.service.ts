@@ -95,60 +95,49 @@ export class PaymentService {
     const webhookSecret = this.config.get('STRIPE_WEBHOOK_SECRET');
 
     try {
-      console.log('Signature:', signature);
-      console.log('Payload:', payload.toString());
-
       const event = this.stripe.webhooks.constructEvent(
         payload,
         signature,
         webhookSecret
       );
 
-      console.log('Event type:', event.type);
-      console.log('Event data:', JSON.stringify(event.data));
-
       switch (event.type) {
-        case 'checkout.session.completed': {
-          const session = event.data.object as Stripe.Checkout.Session;
-          await this.handleCheckoutCompleted(session);
+        case 'checkout.session.completed':
+          await this.processCheckoutCompleted(event.data.object);
           break;
-        }
-        case 'customer.subscription.deleted': {
-          const subscription = event.data.object as Stripe.Subscription;
-          await this.handleSubscriptionDeleted(subscription);
+        case 'customer.subscription.created':
+          await this.processSubscriptionCreated(event.data.object);
           break;
-        }
-        case 'customer.subscription.updated': {
-          const subscription = event.data.object as Stripe.Subscription;
-          await this.handleSubscriptionUpdated(subscription);
+        case 'customer.subscription.deleted':
+          await this.processSubscriptionDeleted(event.data.object);
           break;
-        }
       }
 
       return { received: true };
-    } catch (err) {
-      console.error('Webhook error details:', err);
-      throw err;
+    } catch (error) {
+      console.error('Webhook processing error:', error);
+      throw error;
     }
   }
 
-  private async handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-    const subscription = await this.prisma.subscription.findFirst({
-      where: { stripeCustomerId: session.customer as string },
-    });
-
-    if (!subscription) {
-      this.logger.error(`No subscription found for customer: ${session.customer}`);
-      return;
-    }
+  private async processCheckoutCompleted(session: Stripe.Checkout.Session) {
+    const userId = Number(session.metadata.userId);
 
     await this.prisma.subscription.update({
-      where: { id: subscription.id },
+      where: { userId },
       data: {
-        status: SubStatus.ACTIVE,
-        stripeSubscriptionId: session.subscription as string,
-      },
+        status: 'ACTIVE',
+        stripeSubscriptionId: session.subscription as string
+      }
     });
+  }
+
+  private async processSubscriptionCreated(subscription: Stripe.Subscription) {
+    // Логика создания подписки
+  }
+
+  private async processSubscriptionDeleted(subscription: Stripe.Subscription) {
+    // Логика удаления подписки
   }
 
   private async handleSubscriptionDeleted(subscription: Stripe.Subscription) {
