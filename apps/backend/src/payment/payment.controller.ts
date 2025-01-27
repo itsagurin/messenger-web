@@ -7,16 +7,17 @@ import {
   Headers,
   ValidationPipe,
   UsePipes,
+  Logger,
   RawBodyRequest,
-  Logger, Header,
 } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { CreateSubscriptionDto } from './dto/subscription.dto';
 import { JwtStrategy } from '../auth/jwt.strategy';
+import { Request } from 'express';
 
 @Controller('payment')
 export class PaymentController {
-  private readonly logger = new Logger(PaymentController.name); // Добавьте Logger
+  private readonly logger = new Logger(PaymentController.name);
 
   constructor(private paymentService: PaymentService) {}
 
@@ -29,31 +30,25 @@ export class PaymentController {
       forbidNonWhitelisted: true,
     }),
   )
-  async createSubscription(
-    @Body() dto: CreateSubscriptionDto,
-  ) {
-    console.log('Received DTO:', dto);
+  async createSubscription(@Body() dto: CreateSubscriptionDto) {
+    this.logger.log('Creating subscription for user:', dto.userId);
     return this.paymentService.createSubscription(dto.userId, dto.planType);
   }
 
   @Post('webhook')
   async handleWebhook(
     @Headers('stripe-signature') signature: string,
-    @Req() req: any
+    @Req() req: RawBodyRequest<Request>,
   ) {
-    return this.paymentService.handleWebhook(signature, req.rawBody);
-  }
+    this.logger.log('Webhook endpoint hit');
+    this.logger.log(`Signature: ${signature}`);
 
-  private async streamToBuffer(stream: ReadableStream<Uint8Array>): Promise<Buffer> {
-    const chunks: Uint8Array[] = [];
-    const reader = stream.getReader();
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
+    if (!req.rawBody) {
+      this.logger.error('No raw body found in request');
+      throw new Error('No raw body found in request');
     }
 
-    return Buffer.concat(chunks);
+    this.logger.log(`Raw body length: ${req.rawBody.length}`);
+    return this.paymentService.handleWebhook(signature, req.rawBody);
   }
 }

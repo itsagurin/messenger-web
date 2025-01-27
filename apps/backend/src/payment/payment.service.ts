@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import Stripe from 'stripe';
 import { ConfigService } from '@nestjs/config';
-import { PlanType, SubStatus, User } from '@prisma/client';
+import { PlanType, SubStatus } from '@prisma/client';
 import { SUBSCRIPTION_PLANS } from './constants/plans.constant';
 
 @Injectable()
@@ -66,6 +66,9 @@ export class PaymentService {
         price: SUBSCRIPTION_PLANS[planType].stripeId,
         quantity: 1,
       }],
+      metadata: {
+        userId: user.id.toString(),
+      },
       success_url: `${this.config.get('FRONTEND_URL')}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${this.config.get('FRONTEND_URL')}/payment/cancel`,
     });
@@ -95,59 +98,68 @@ export class PaymentService {
     const webhookSecret = this.config.get('STRIPE_WEBHOOK_SECRET');
 
     try {
+      this.logger.log('Processing webhook with secret');
+
       const event = this.stripe.webhooks.constructEvent(
         payload,
         signature,
         webhookSecret
       );
 
+      this.logger.log(`Processing webhook event type: ${event.type}`);
+
       switch (event.type) {
         case 'checkout.session.completed':
-          await this.processCheckoutCompleted(event.data.object);
+          const session = event.data.object as Stripe.Checkout.Session;
+          this.logger.log('Processing completed checkout session:', session.id);
+          await this.processCheckoutCompleted(session);
           break;
         case 'customer.subscription.created':
-          await this.processSubscriptionCreated(event.data.object);
+        case 'customer.subscription.updated':
+          const subscription = event.data.object as Stripe.Subscription;
+          this.logger.log('Processing subscription update:', subscription.id);
+          await this.handleSubscriptionUpdated(subscription);
           break;
         case 'customer.subscription.deleted':
-          await this.processSubscriptionDeleted(event.data.object);
+          const deletedSubscription = event.data.object as Stripe.Subscription;
+          this.logger.log('Processing subscription deletion:', deletedSubscription.id);
+          await this.handleSubscriptionDeleted(deletedSubscription);
           break;
       }
 
       return { received: true };
     } catch (error) {
-      console.error('Webhook processing error:', error);
+      this.logger.error('Webhook processing error:', error);
       throw error;
     }
   }
 
   private async processCheckoutCompleted(session: Stripe.Checkout.Session) {
+    this.logger.log('Processing checkout completion');
+
+    if (!session.metadata?.userId) {
+      this.logger.error('No userId in session metadata');
+      throw new Error('No userId in session metadata');
+    }
+
     const userId = Number(session.metadata.userId);
 
-    await this.prisma.subscription.update({
-      where: { userId },
-      data: {
-        status: 'ACTIVE',
-        stripeSubscriptionId: session.subscription as string
-      }
-    });
-  }
+    try {
+      const subscription = await this.stripe.subscriptions.retrieve(session.subscription as string);
 
-  private async processSubscriptionCreated(subscription: Stripe.Subscription) {
-    // Логика создания подписки
-  }
-
-  private async processSubscriptionDeleted(subscription: Stripe.Subscription) {
-    // Логика удаления подписки
-  }
-
-  private async handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-    await this.prisma.subscription.updateMany({
-      where: { stripeSubscriptionId: subscription.id },
-      data: {
-        status: SubStatus.CANCELED,
-        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-      },
-    });
+      await this.prisma.subscription.update({
+        where: { userId },
+        data: {
+          status: SubStatus.ACTIVE,
+          stripeSubscriptionId: session.subscription as string,
+          currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        }
+      });
+      this.logger.log(`Successfully updated subscription for user ${userId}`);
+    } catch (error) {
+      this.logger.error(`Failed to update subscription for user ${userId}:`, error);
+      throw error;
+    }
   }
 
   private async handleSubscriptionUpdated(subscription: Stripe.Subscription) {
@@ -160,6 +172,18 @@ export class PaymentService {
         currentPeriodEnd: new Date(subscription.current_period_end * 1000),
       },
     });
+    this.logger.log(`Updated subscription ${subscription.id} status to ${status}`);
+  }
+
+  private async handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+    await this.prisma.subscription.updateMany({
+      where: { stripeSubscriptionId: subscription.id },
+      data: {
+        status: SubStatus.CANCELED,
+        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+      },
+    });
+    this.logger.log(`Marked subscription ${subscription.id} as canceled`);
   }
 
   private mapStripeStatus(stripeStatus: string): SubStatus {
