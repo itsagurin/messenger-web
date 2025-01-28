@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import Stripe from 'stripe';
 import { ConfigService } from '@nestjs/config';
@@ -6,20 +6,46 @@ import { PlanType, SubStatus } from '@prisma/client';
 import { SUBSCRIPTION_PLANS } from './constants/plans.constant';
 
 @Injectable()
-export class PaymentService {
+export class PaymentService implements OnModuleInit {
   private stripe: Stripe;
   private readonly logger = new Logger(PaymentService.name);
+  private frontendUrl: string;
 
   constructor(
     private prisma: PrismaService,
     private config: ConfigService,
   ) {
-    this.stripe = new Stripe(this.config.get('STRIPE_SECRET_KEY'), {
+    const stripeKey = this.config.get('STRIPE_SECRET_KEY');
+    if (!stripeKey) {
+      throw new Error('STRIPE_SECRET_KEY is not configured');
+    }
+
+    this.stripe = new Stripe(stripeKey, {
       apiVersion: '2024-12-18.acacia',
     });
   }
 
+  onModuleInit() {
+    const requiredConfigs = [
+      'STRIPE_SECRET_KEY',
+      'STRIPE_WEBHOOK_SECRET',
+      'FRONTEND_URL'
+    ];
+
+    for (const config of requiredConfigs) {
+      const value = this.config.get(config);
+      if (!value) {
+        throw new Error(`${config} is not configured`);
+      }
+    }
+
+    this.frontendUrl = this.config.get('FRONTEND_URL');
+    this.logger.log(`Initialized PaymentService with frontend URL: ${this.frontendUrl}`);
+  }
+
   async createSubscription(userId: number, planType: PlanType) {
+    this.logger.log(`Creating subscription for user ${userId} with plan ${planType}`);
+
     if (!userId) {
       throw new Error('User ID is required');
     }
@@ -29,7 +55,9 @@ export class PaymentService {
       include: { subscription: true },
     });
 
-    if (!user) throw new Error('User not found');
+    if (!user) {
+      throw new Error('User not found');
+    }
 
     let stripeCustomerId = user.subscription?.stripeCustomerId;
     if (!stripeCustomerId) {
@@ -58,6 +86,11 @@ export class PaymentService {
       return { success: true };
     }
 
+    const successUrl = new URL('/payment/success', this.frontendUrl);
+    successUrl.searchParams.append('session_id', '{CHECKOUT_SESSION_ID}');
+
+    const cancelUrl = new URL('/payment/cancel', this.frontendUrl);
+
     const session = await this.stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       mode: 'subscription',
@@ -69,8 +102,8 @@ export class PaymentService {
       metadata: {
         userId: user.id.toString(),
       },
-      success_url: `${this.config.get('FRONTEND_URL')}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${this.config.get('FRONTEND_URL')}/payment/cancel`,
+      success_url: successUrl.toString(),
+      cancel_url: cancelUrl.toString(),
     });
 
     await this.prisma.subscription.upsert({

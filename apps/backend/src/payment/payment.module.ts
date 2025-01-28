@@ -17,7 +17,7 @@ export class PaymentModule implements NestModule {
       .apply(StripeWebhookMiddleware)
       .forRoutes({
         path: 'payment/webhook',
-        method: RequestMethod.POST
+        method: RequestMethod.POST,
       });
   }
 }

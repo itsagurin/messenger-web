@@ -5,9 +5,14 @@ import * as bodyParser from 'body-parser';
 @Injectable()
 export class StripeWebhookMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
-    if (req.path.endsWith('/payment/webhook')) {
-      return bodyParser.raw({ type: 'application/json' })(req, res, next);
-    }
-    next();
+    bodyParser.raw({
+      type: 'application/json',
+      verify: (req: any, res, buffer) => {
+        if (req.url === '/payment/webhook') {
+          req.rawBody = buffer;
+        }
+        return true;
+      }
+    })(req, res, next);
   }
 }
