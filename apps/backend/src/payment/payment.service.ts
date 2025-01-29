@@ -4,6 +4,7 @@ import Stripe from 'stripe';
 import { ConfigService } from '@nestjs/config';
 import { PlanType, SubStatus } from '@prisma/client';
 import { SUBSCRIPTION_PLANS } from './constants/plans.constant';
+import { Cron } from '@nestjs/schedule';
 
 @Injectable()
 export class PaymentService implements OnModuleInit {
@@ -41,6 +42,23 @@ export class PaymentService implements OnModuleInit {
 
     this.frontendUrl = this.config.get('FRONTEND_URL');
     this.logger.log(`Initialized PaymentService with frontend URL: ${this.frontendUrl}`);
+  }
+
+  @Cron('0 0 * * *')
+  async renewBasicSubscriptions() {
+    const now = new Date();
+    await this.prisma.subscription.updateMany({
+      where: {
+        planType: PlanType.BASIC,
+        currentPeriodEnd: { lte: now },
+      },
+      data: {
+        currentPeriodStart: now,
+        currentPeriodEnd: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000), // +30 дней
+      },
+    });
+
+    console.log('BASIC subscriptions have been renewed');
   }
 
   async createSubscription(userId: number, planType: PlanType) {
@@ -124,6 +142,48 @@ export class PaymentService implements OnModuleInit {
     return {
       sessionId: session.id,
       checkoutUrl: session.url,
+    };
+  }
+
+  async getCurrentPlan(userId: number) {
+    this.logger.log(`Getting current plan for user ${userId}`);
+
+    const subscription = await this.prisma.subscription.findUnique({
+      where: { userId },
+      select: {
+        planType: true,
+        status: true,
+        currentPeriodStart: true,
+        currentPeriodEnd: true,
+        stripeSubscriptionId: true,
+      },
+    });
+
+    if (!subscription) {
+      return null;
+    }
+
+    let stripeSubscriptionDetails = null;
+    if (subscription.stripeSubscriptionId) {
+      try {
+        const stripeSubscription = await this.stripe.subscriptions.retrieve(
+          subscription.stripeSubscriptionId
+        );
+        stripeSubscriptionDetails = {
+          cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
+          created: new Date(stripeSubscription.created * 1000),
+        };
+      } catch (error) {
+        this.logger.error(`Failed to fetch Stripe subscription details: ${error.message}`);
+      }
+    }
+
+    return {
+      plan: subscription.planType,
+      status: subscription.status,
+      periodStart: subscription.currentPeriodStart,
+      periodEnd: subscription.currentPeriodEnd,
+      ...stripeSubscriptionDetails && { stripeDetails: stripeSubscriptionDetails },
     };
   }
 

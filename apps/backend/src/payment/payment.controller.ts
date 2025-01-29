@@ -8,7 +8,7 @@ import {
   ValidationPipe,
   UsePipes,
   Logger,
-  RawBodyRequest,
+  RawBodyRequest, Get, NotFoundException, Param, ParseIntPipe,
 } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { CreateSubscriptionDto } from './dto/subscription.dto';
@@ -33,6 +33,19 @@ export class PaymentController {
   async createSubscription(@Body() dto: CreateSubscriptionDto) {
     this.logger.log('Creating subscription for user:', dto.userId);
     return this.paymentService.createSubscription(dto.userId, dto.planType);
+  }
+
+  @Get('current-plan/:userId')
+  @UseGuards(JwtStrategy)
+  async getCurrentPlan(@Param('userId', ParseIntPipe) userId: number) {
+    this.logger.log(`Fetching subscription info for user: ${userId}`);
+    const subscriptionInfo = await this.paymentService.getCurrentPlan(userId);
+
+    if (!subscriptionInfo) {
+      throw new NotFoundException('No subscription found for this user');
+    }
+
+    return subscriptionInfo;
   }
 
   @Post('webhook')

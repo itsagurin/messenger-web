@@ -1,6 +1,7 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import {PrismaService} from "../prisma.service";
 import * as bcrypt from 'bcrypt';
+import { PlanType, SubStatus } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
@@ -14,18 +15,40 @@ export class UsersService {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const newUser = await this.prisma.user.create({
-            data: {
-                email,
-                password: hashedPassword,
-                refreshToken: null
-            },
+        const result = await this.prisma.$transaction(async (prisma) => {
+            const newUser = await prisma.user.create({
+                data: {
+                    email,
+                    password: hashedPassword,
+                    refreshToken: null,
+                },
+            });
+
+            const subscription = await prisma.subscription.create({
+                data: {
+                    userId: newUser.id,
+                    planType: PlanType.BASIC,
+                    status: SubStatus.ACTIVE,
+                    currentPeriodStart: new Date(),
+                    currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                },
+            });
+
+            return {
+                user: newUser,
+                subscription,
+            };
         });
 
         return {
             message: 'Registration successful',
-            userId: newUser.id,
-            email: newUser.email
+            userId: result.user.id,
+            email: result.user.email,
+            subscription: {
+                planType: result.subscription.planType,
+                status: result.subscription.status,
+                currentPeriodEnd: result.subscription.currentPeriodEnd,
+            },
         };
     }
 
