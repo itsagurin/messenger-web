@@ -8,7 +8,11 @@ import {
   ValidationPipe,
   UsePipes,
   Logger,
-  RawBodyRequest, Get, NotFoundException, Param, ParseIntPipe,
+  RawBodyRequest,
+  Get,
+  NotFoundException,
+  Param,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { CreateSubscriptionDto } from './dto/subscription.dto';
@@ -31,7 +35,7 @@ export class PaymentController {
     }),
   )
   async createSubscription(@Body() dto: CreateSubscriptionDto) {
-    this.logger.log('Creating subscription for user:', dto.userId);
+    this.logger.log('Creating/extending subscription for user:', dto.userId);
     return this.paymentService.createSubscription(dto.userId, dto.planType);
   }
 

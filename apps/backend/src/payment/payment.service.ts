@@ -45,28 +45,70 @@ export class PaymentService implements OnModuleInit {
   }
 
   @Cron('0 0 * * *')
-  async renewBasicSubscriptions() {
+  async checkExpiredSubscriptions() {
     const now = new Date();
+
+    // First handle basic subscriptions renewal
     await this.prisma.subscription.updateMany({
       where: {
         planType: PlanType.BASIC,
         currentPeriodEnd: { lte: now },
+        status: SubStatus.ACTIVE,
       },
       data: {
         currentPeriodStart: now,
-        currentPeriodEnd: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000), // +30 дней
+        currentPeriodEnd: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
       },
     });
 
-    console.log('BASIC subscriptions have been renewed');
+    // Then handle paid subscriptions
+    const expiredPaidSubscriptions = await this.prisma.subscription.findMany({
+      where: {
+        currentPeriodEnd: { lte: now },
+        planType: { not: PlanType.BASIC },
+        status: SubStatus.ACTIVE,
+      },
+    });
+
+    for (const subscription of expiredPaidSubscriptions) {
+      if (subscription.stripeSubscriptionId) {
+        try {
+          const stripeSubscription = await this.stripe.subscriptions.retrieve(
+            subscription.stripeSubscriptionId
+          );
+
+          if (stripeSubscription.status === 'active') {
+            // Update subscription period if still active in Stripe
+            await this.prisma.subscription.update({
+              where: { id: subscription.id },
+              data: {
+                currentPeriodStart: new Date(stripeSubscription.current_period_start * 1000),
+                currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
+              },
+            });
+            continue;
+          }
+        } catch (error) {
+          this.logger.error(`Failed to check Stripe subscription: ${error.message}`);
+        }
+      }
+
+      // If Stripe subscription is not active or there was an error, downgrade to BASIC
+      await this.prisma.subscription.update({
+        where: { id: subscription.id },
+        data: {
+          planType: PlanType.BASIC,
+          status: SubStatus.ACTIVE,
+          currentPeriodStart: now,
+          currentPeriodEnd: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+          stripeSubscriptionId: null,
+        },
+      });
+    }
   }
 
   async createSubscription(userId: number, planType: PlanType) {
     this.logger.log(`Creating subscription for user ${userId} with plan ${planType}`);
-
-    if (!userId) {
-      throw new Error('User ID is required');
-    }
 
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -77,6 +119,28 @@ export class PaymentService implements OnModuleInit {
       throw new Error('User not found');
     }
 
+    // Handle BASIC plan subscription immediately
+    if (planType === PlanType.BASIC) {
+      const now = new Date();
+      return this.prisma.subscription.upsert({
+        where: { userId: user.id },
+        create: {
+          userId: user.id,
+          planType,
+          status: SubStatus.ACTIVE,
+          currentPeriodStart: now,
+          currentPeriodEnd: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+        },
+        update: {
+          planType,
+          status: SubStatus.ACTIVE,
+          currentPeriodStart: now,
+          currentPeriodEnd: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+        },
+      });
+    }
+
+    // For paid plans, create/get Stripe customer
     let stripeCustomerId = user.subscription?.stripeCustomerId;
     if (!stripeCustomerId) {
       const customer = await this.stripe.customers.create({
@@ -84,29 +148,19 @@ export class PaymentService implements OnModuleInit {
         metadata: { userId: user.id.toString() },
       });
       stripeCustomerId = customer.id;
+
+      // Update stripeCustomerId if subscription exists
+      if (user.subscription) {
+        await this.prisma.subscription.update({
+          where: { userId: user.id },
+          data: { stripeCustomerId },
+        });
+      }
     }
 
-    if (planType === PlanType.BASIC) {
-      await this.prisma.subscription.upsert({
-        where: { userId: user.id },
-        create: {
-          userId: user.id,
-          planType,
-          status: SubStatus.ACTIVE,
-          stripeCustomerId,
-        },
-        update: {
-          planType,
-          status: SubStatus.ACTIVE,
-          stripeCustomerId,
-        },
-      });
-      return { success: true };
-    }
-
+    // Create Stripe checkout session
     const successUrl = new URL('/payment/success', this.frontendUrl);
     successUrl.searchParams.append('session_id', '{CHECKOUT_SESSION_ID}');
-
     const cancelUrl = new URL('/payment/cancel', this.frontendUrl);
 
     const session = await this.stripe.checkout.sessions.create({
@@ -119,24 +173,10 @@ export class PaymentService implements OnModuleInit {
       }],
       metadata: {
         userId: user.id.toString(),
+        planType,
       },
       success_url: successUrl.toString(),
       cancel_url: cancelUrl.toString(),
-    });
-
-    await this.prisma.subscription.upsert({
-      where: { userId: user.id },
-      create: {
-        userId: user.id,
-        planType,
-        stripeCustomerId,
-        status: SubStatus.INCOMPLETE,
-      },
-      update: {
-        planType,
-        stripeCustomerId,
-        status: SubStatus.INCOMPLETE,
-      },
     });
 
     return {
@@ -191,8 +231,6 @@ export class PaymentService implements OnModuleInit {
     const webhookSecret = this.config.get('STRIPE_WEBHOOK_SECRET');
 
     try {
-      this.logger.log('Processing webhook with secret');
-
       const event = this.stripe.webhooks.constructEvent(
         payload,
         signature,
@@ -203,20 +241,16 @@ export class PaymentService implements OnModuleInit {
 
       switch (event.type) {
         case 'checkout.session.completed':
-          const session = event.data.object as Stripe.Checkout.Session;
-          this.logger.log('Processing completed checkout session:', session.id);
-          await this.processCheckoutCompleted(session);
+          await this.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
           break;
-        case 'customer.subscription.created':
-        case 'customer.subscription.updated':
-          const subscription = event.data.object as Stripe.Subscription;
-          this.logger.log('Processing subscription update:', subscription.id);
-          await this.handleSubscriptionUpdated(subscription);
+        case 'invoice.paid':
+          await this.handleInvoicePaid(event.data.object as Stripe.Invoice);
+          break;
+        case 'invoice.payment_failed':
+          await this.handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
           break;
         case 'customer.subscription.deleted':
-          const deletedSubscription = event.data.object as Stripe.Subscription;
-          this.logger.log('Processing subscription deletion:', deletedSubscription.id);
-          await this.handleSubscriptionDeleted(deletedSubscription);
+          await this.handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
           break;
       }
 
@@ -227,66 +261,82 @@ export class PaymentService implements OnModuleInit {
     }
   }
 
-  private async processCheckoutCompleted(session: Stripe.Checkout.Session) {
-    this.logger.log('Processing checkout completion');
-
+  private async handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     if (!session.metadata?.userId) {
-      this.logger.error('No userId in session metadata');
       throw new Error('No userId in session metadata');
     }
 
     const userId = Number(session.metadata.userId);
+    const planType = session.metadata.planType as PlanType;
+    const subscription = await this.stripe.subscriptions.retrieve(session.subscription as string);
 
-    try {
-      const subscription = await this.stripe.subscriptions.retrieve(session.subscription as string);
-
-      await this.prisma.subscription.update({
-        where: { userId },
-        data: {
-          status: SubStatus.ACTIVE,
-          stripeSubscriptionId: session.subscription as string,
-          currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-        }
-      });
-      this.logger.log(`Successfully updated subscription for user ${userId}`);
-    } catch (error) {
-      this.logger.error(`Failed to update subscription for user ${userId}:`, error);
-      throw error;
-    }
-  }
-
-  private async handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-    const status = this.mapStripeStatus(subscription.status);
-    await this.prisma.subscription.updateMany({
-      where: { stripeSubscriptionId: subscription.id },
-      data: {
-        status,
+    await this.prisma.subscription.upsert({
+      where: { userId },
+      create: {
+        userId,
+        planType,
+        status: SubStatus.ACTIVE,
+        stripeCustomerId: session.customer as string,
+        stripeSubscriptionId: subscription.id,
+        currentPeriodStart: new Date(subscription.current_period_start * 1000),
+        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+      },
+      update: {
+        planType,
+        status: SubStatus.ACTIVE,
+        stripeSubscriptionId: subscription.id,
         currentPeriodStart: new Date(subscription.current_period_start * 1000),
         currentPeriodEnd: new Date(subscription.current_period_end * 1000),
       },
     });
-    this.logger.log(`Updated subscription ${subscription.id} status to ${status}`);
+  }
+
+  private async handleInvoicePaid(invoice: Stripe.Invoice) {
+    if (!invoice.subscription) return;
+
+    const subscription = await this.stripe.subscriptions.retrieve(invoice.subscription as string);
+    const customer = await this.stripe.customers.retrieve(invoice.customer as string);
+    const userId = Number((customer as Stripe.Customer).metadata.userId);
+
+    await this.prisma.subscription.update({
+      where: { userId },
+      data: {
+        currentPeriodStart: new Date(subscription.current_period_start * 1000),
+        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        status: SubStatus.ACTIVE,
+      },
+    });
+  }
+
+  private async handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
+    if (!invoice.subscription) return;
+
+    const subscription = await this.stripe.subscriptions.retrieve(invoice.subscription as string);
+    const customer = await this.stripe.customers.retrieve(invoice.customer as string);
+    const userId = Number((customer as Stripe.Customer).metadata.userId);
+
+    await this.prisma.subscription.update({
+      where: { userId },
+      data: {
+        status: SubStatus.PAST_DUE,
+      },
+    });
   }
 
   private async handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-    await this.prisma.subscription.updateMany({
-      where: { stripeSubscriptionId: subscription.id },
+    const customer = await this.stripe.customers.retrieve(subscription.customer as string);
+    const userId = Number((customer as Stripe.Customer).metadata.userId);
+    const now = new Date();
+
+    await this.prisma.subscription.update({
+      where: { userId },
       data: {
-        status: SubStatus.CANCELED,
-        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        planType: PlanType.BASIC,
+        status: SubStatus.ACTIVE,
+        stripeSubscriptionId: null,
+        currentPeriodStart: now,
+        currentPeriodEnd: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
       },
     });
-    this.logger.log(`Marked subscription ${subscription.id} as canceled`);
-  }
-
-  private mapStripeStatus(stripeStatus: string): SubStatus {
-    const statusMap: Record<string, SubStatus> = {
-      active: SubStatus.ACTIVE,
-      canceled: SubStatus.CANCELED,
-      incomplete: SubStatus.INCOMPLETE,
-      past_due: SubStatus.PAST_DUE,
-      unpaid: SubStatus.UNPAID,
-    };
-    return statusMap[stripeStatus] || SubStatus.INCOMPLETE;
   }
 }
