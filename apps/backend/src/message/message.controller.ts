@@ -18,7 +18,7 @@ export class MessageController {
     return this.messageService.getAllMessages();
   }
 
-  @Get('unread/:receiverId')  // Изменили путь
+  @Get('unread/:receiverId')
   async getUnreadCount(@Param('receiverId') receiverId: string) {
     const receiverIdNum = parseInt(receiverId, 10);
     if (isNaN(receiverIdNum)) {
@@ -27,7 +27,7 @@ export class MessageController {
     return this.messageService.getUnreadCount(receiverIdNum);
   }
 
-  @Post('mark-read/:senderId/:receiverId')  // Изменили путь
+  @Post('mark-read/:senderId/:receiverId')
   async markMessagesAsRead(
     @Param('senderId') senderId: string,
     @Param('receiverId') receiverId: string,

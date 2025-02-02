@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Check, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import './PlansPage.css';
-import { useSubscription } from '../../contexts/SubscriptionContext.tsx';
+import { useSubscription } from '../../contexts/SubscriptionContext';
+import { useUser } from '../../services/userContext.tsx';
 
 type PlanType = 'BASIC' | 'PLUS' | 'PREMIUM';
 
@@ -14,68 +15,72 @@ interface PlanFeature {
 }
 
 interface SubscriptionPlan {
+  type: PlanType;
   price: number;
   features: PlanFeature[];
   isPopular?: boolean;
-  isCurrent?: boolean;
 }
 
-const getPlanType = (index: number): PlanType => {
-  switch (index) {
-    case 0: return 'BASIC';
-    case 1: return 'PLUS';
-    case 2: return 'PREMIUM';
-    default: return 'BASIC';
-  }
-};
+const subscriptionPlans: SubscriptionPlan[] = [
+  {
+    type: 'BASIC',
+    price: 0,
+    features: [
+      { prefix: 'Get started with ', bold: 'messaging' },
+      { prefix: 'Flexible ', bold: 'team meeting' },
+      { bold: '5 TB', suffix: ' cloud storage' },
+    ],
+  },
+  {
+    type: 'PLUS',
+    price: 5,
+    isPopular: true,
+    features: [
+      { prefix: 'All features in ', bold: 'Basic' },
+      { prefix: 'Flexible ', bold: 'message scheduling' },
+      { bold: '15 TB', suffix: ' cloud storage' },
+    ],
+  },
+  {
+    type: 'PREMIUM',
+    price: 10,
+    features: [
+      { prefix: 'All features in ', bold: 'Plus' },
+      { prefix: 'Special ', bold: 'emoji' },
+      { bold: 'Unlimited', suffix: ' cloud storage' },
+    ],
+  },
+];
 
 interface PlansPageProps {
   className?: string;
 }
 
 const PlansPage: React.FC<PlansPageProps> = ({ className }) => {
-  const { currentPlan, isLoading, error, subscribe } = useSubscription();
+  const { currentUser } = useUser();
+  const { currentPlan, isLoading, error, subscribe, fetchCurrentPlan } = useSubscription();
+
+  useEffect(() => {
+    if (currentUser?.userId) {
+      fetchCurrentPlan();
+    }
+  }, [currentUser]);
 
   const handleSubscribe = async (planType: PlanType) => {
-    if (isLoading) return;
+    if (isLoading || !currentUser?.userId) return;
+
     try {
       await subscribe(planType);
+      await fetchCurrentPlan();
       toast.success(`Successfully subscribed to ${planType} plan!`);
     } catch (err) {
       toast.error(error || 'Failed to subscribe. Please try again.');
     }
   };
 
-  const subscriptionPlans: SubscriptionPlan[] = [
-    {
-      price: 0,
-      isCurrent: currentPlan === 'BASIC',
-      features: [
-        { prefix: 'Get started with ', bold: 'messaging' },
-        { prefix: 'Flexible ', bold: 'team meeting' },
-        { bold: '5 TB', suffix: ' cloud storage' },
-      ],
-    },
-    {
-      price: 5,
-      isCurrent: currentPlan === 'PLUS',
-      isPopular: true,
-      features: [
-        { prefix: 'All features in ', bold: 'Basic' },
-        { prefix: 'Flexible ', bold: 'message scheduling' },
-        { bold: '15 TB', suffix: ' cloud storage' },
-      ],
-    },
-    {
-      price: 10,
-      isCurrent: currentPlan === 'PREMIUM',
-      features: [
-        { prefix: 'All features in ', bold: 'Plus' },
-        { prefix: 'Special ', bold: 'emoji' },
-        { bold: 'Unlimited', suffix: ' cloud storage' },
-      ],
-    },
-  ];
+  if (!currentUser) {
+    return <div>Please log in to view subscription plans</div>;
+  }
 
   return (
     <div className="plans-page-wrapper">
@@ -88,48 +93,52 @@ const PlansPage: React.FC<PlansPageProps> = ({ className }) => {
       </div>
 
       <div className={`con-items ${className || ''}`}>
-        {subscriptionPlans.map((plan, index) => (
-          <div
-            key={index}
-            className={`item ${plan.isPopular ? 'color' : ''} item${index + 1}`}
-          >
-            {plan.isCurrent && (
-              <span className="current-plan-badge">
-                Current Plan
-              </span>
-            )}
-            {plan.isPopular && (
-              <span className="badge">
-                Popular
-              </span>
-            )}
-            <header>
-              <h3>
-                {index === 0 ? 'Basic' : index === 1 ? 'Plus' : 'Premium'}
-              </h3>
-              <p>
-                <b>
-                  {plan.price}$ / user
-                </b>
-              </p>
-            </header>
-            <ul>
-              {plan.features.map((feature, featureIndex) => (
-                <li key={featureIndex}>
-                  <Check size={24} />
-                  {feature.prefix}<b>{feature.bold}</b>{feature.suffix}
-                </li>
-              ))}
-            </ul>
-            <button
-              className={`${plan.isPopular ? 'border' : ''} ${plan.isCurrent ? 'current' : ''}`}
-              disabled={isLoading || plan.isCurrent}
-              onClick={() => handleSubscribe(getPlanType(index))}
+        {subscriptionPlans.map((plan, index) => {
+          const isCurrentPlan = currentPlan === plan.type;
+
+          return (
+            <div
+              key={index}
+              className={`item ${plan.isPopular ? 'color' : ''} item${index + 1}`}
             >
-              {isLoading ? 'Processing...' : plan.isCurrent ? 'Your Current Plan' : 'Choose Plan'}
-            </button>
-          </div>
-        ))}
+              {isCurrentPlan && (
+                <span className="current-plan-badge">
+                  Current Plan
+                </span>
+              )}
+              {plan.isPopular && (
+                <span className="badge">
+                  Popular
+                </span>
+              )}
+              <header>
+                <h3>
+                  {plan.type.charAt(0) + plan.type.slice(1).toLowerCase()}
+                </h3>
+                <p>
+                  <b>
+                    {plan.price}$ / user
+                  </b>
+                </p>
+              </header>
+              <ul>
+                {plan.features.map((feature, featureIndex) => (
+                  <li key={featureIndex}>
+                    <Check size={24} />
+                    {feature.prefix}<b>{feature.bold}</b>{feature.suffix}
+                  </li>
+                ))}
+              </ul>
+              <button
+                className={`${plan.isPopular ? 'border' : ''} ${isCurrentPlan ? 'current' : ''}`}
+                disabled={isLoading || isCurrentPlan}
+                onClick={() => handleSubscribe(plan.type)}
+              >
+                {isLoading ? 'Processing...' : isCurrentPlan ? 'Your Current Plan' : 'Choose Plan'}
+              </button>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

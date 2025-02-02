@@ -48,7 +48,6 @@ export class PaymentService implements OnModuleInit {
   async checkExpiredSubscriptions() {
     const now = new Date();
 
-    // First handle basic subscriptions renewal
     await this.prisma.subscription.updateMany({
       where: {
         planType: PlanType.BASIC,
@@ -61,7 +60,6 @@ export class PaymentService implements OnModuleInit {
       },
     });
 
-    // Then handle paid subscriptions
     const expiredPaidSubscriptions = await this.prisma.subscription.findMany({
       where: {
         currentPeriodEnd: { lte: now },
@@ -78,7 +76,6 @@ export class PaymentService implements OnModuleInit {
           );
 
           if (stripeSubscription.status === 'active') {
-            // Update subscription period if still active in Stripe
             await this.prisma.subscription.update({
               where: { id: subscription.id },
               data: {
@@ -93,7 +90,6 @@ export class PaymentService implements OnModuleInit {
         }
       }
 
-      // If Stripe subscription is not active or there was an error, downgrade to BASIC
       await this.prisma.subscription.update({
         where: { id: subscription.id },
         data: {
@@ -119,7 +115,6 @@ export class PaymentService implements OnModuleInit {
       throw new Error('User not found');
     }
 
-    // Handle BASIC plan subscription immediately
     if (planType === PlanType.BASIC) {
       const now = new Date();
       return this.prisma.subscription.upsert({
@@ -140,7 +135,6 @@ export class PaymentService implements OnModuleInit {
       });
     }
 
-    // For paid plans, create/get Stripe customer
     let stripeCustomerId = user.subscription?.stripeCustomerId;
     if (!stripeCustomerId) {
       const customer = await this.stripe.customers.create({
@@ -149,7 +143,6 @@ export class PaymentService implements OnModuleInit {
       });
       stripeCustomerId = customer.id;
 
-      // Update stripeCustomerId if subscription exists
       if (user.subscription) {
         await this.prisma.subscription.update({
           where: { userId: user.id },
@@ -158,7 +151,6 @@ export class PaymentService implements OnModuleInit {
       }
     }
 
-    // Create Stripe checkout session
     const successUrl = new URL('/payment/success', this.frontendUrl);
     successUrl.searchParams.append('session_id', '{CHECKOUT_SESSION_ID}');
     const cancelUrl = new URL('/payment/cancel', this.frontendUrl);

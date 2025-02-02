@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
+import { useUser } from '../services/userContext.tsx';
 
 const API_URL = 'http://localhost:4000';
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
@@ -11,6 +12,7 @@ interface SubscriptionContextType {
   isLoading: boolean;
   error: string | null;
   subscribe: (planType: PlanType) => Promise<void>;
+  fetchCurrentPlan: () => Promise<void>;
 }
 
 const defaultContextValue: SubscriptionContextType = {
@@ -18,6 +20,7 @@ const defaultContextValue: SubscriptionContextType = {
   isLoading: false,
   error: null,
   subscribe: async () => {},
+  fetchCurrentPlan: async () => {},
 };
 
 const SubscriptionContext = createContext<SubscriptionContextType>(defaultContextValue);
@@ -27,11 +30,49 @@ interface SubscriptionProviderProps {
 }
 
 export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ children }) => {
+  const { currentUser } = useUser();
   const [currentPlan, setCurrentPlan] = useState<PlanType>('BASIC');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchCurrentPlan = async () => {
+
+    try {
+      if (!currentUser?.userId) {
+        throw new Error('User not found');
+      }
+
+      const token = import.meta.env.SECRET_KEY;
+      const response = await fetch(`${API_URL}/payment/current-plan/${currentUser.userId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch current plan');
+      }
+
+      const data = await response.json();
+      setCurrentPlan(data.plan);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch current plan');
+      console.error('Error fetching current plan:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (currentUser?.userId) {
+      fetchCurrentPlan();
+    }
+  }, [currentUser]);
+
   const subscribe = async (planType: PlanType) => {
+    if (!currentUser?.userId) {
+      throw new Error('User not found');
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -42,7 +83,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify({ planType }),
+        body: JSON.stringify({ planType, userId: currentUser.userId }),
       });
 
       const data = await response.json();
@@ -79,7 +120,13 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   };
 
   return (
-    <SubscriptionContext.Provider value={{ currentPlan, isLoading, error, subscribe }}>
+    <SubscriptionContext.Provider value={{
+      currentPlan,
+      isLoading,
+      error,
+      subscribe,
+      fetchCurrentPlan
+    }}>
       {children}
     </SubscriptionContext.Provider>
   );
