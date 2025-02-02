@@ -71,8 +71,10 @@ const PlansPage: React.FC<PlansPageProps> = ({ className }) => {
 
     try {
       await subscribe(planType);
-      await fetchCurrentPlan();
-      toast.success(`Successfully subscribed to ${planType} plan!`);
+      if (planType === 'BASIC') {
+        await fetchCurrentPlan();
+        toast.success(`Successfully subscribed to ${planType} plan!`);
+      }
     } catch (err) {
       toast.error(error || 'Failed to subscribe. Please try again.');
     }

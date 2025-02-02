@@ -1,9 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
 import { useUser } from '../services/userContext.tsx';
 
 const API_URL = 'http://localhost:4000';
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
 
 type PlanType = 'BASIC' | 'PLUS' | 'PREMIUM';
 
@@ -36,7 +34,6 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   const [error, setError] = useState<string | null>(null);
 
   const fetchCurrentPlan = async () => {
-
     try {
       if (!currentUser?.userId) {
         throw new Error('User not found');
@@ -83,7 +80,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify({ planType, userId: currentUser.userId }),
+        body: JSON.stringify({ userId: currentUser.userId, planType }),
       });
 
       const data = await response.json();
@@ -97,20 +94,12 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
         return;
       }
 
-      if (data.clientSecret) {
-        const stripe = await stripePromise;
-        if (!stripe) {
-          throw new Error('Stripe failed to load');
-        }
-
-        const { error: stripeError } = await stripe.confirmCardPayment(data.clientSecret);
-
-        if (stripeError) {
-          throw new Error(stripeError.message);
-        }
-
-        setCurrentPlan(planType);
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+        return;
       }
+
+      throw new Error('No checkout URL returned');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
       console.error('Subscription error:', err);
@@ -125,7 +114,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       isLoading,
       error,
       subscribe,
-      fetchCurrentPlan
+      fetchCurrentPlan,
     }}>
       {children}
     </SubscriptionContext.Provider>
