@@ -10,6 +10,8 @@ import AccessDenied from '../src/pages/accessDenied/accessDenied.tsx';
 import { UserProvider } from '../src/services/userContext.tsx';
 import Profile from '../src/pages/profile/profile.tsx';
 import Subscriptions from '../src/pages/Subscriptions/Subscriptions.tsx';
+import PaymentSuccess from '../src/pages/paymentSuccess/paymentSuccess.tsx';
+import PaymentCancel from '../src/pages/paymentCancel/paymentCancel.tsx';
 
 export const router = createBrowserRouter(
   createRoutesFromElements(
@@ -21,6 +23,9 @@ export const router = createBrowserRouter(
         <Route path="/subscriptions" element={<Subscriptions />} />
       </Route>
       <Route path="/access-denied" element={<AccessDenied />} />
+      <Route path="/payment/success" element={<PaymentSuccess />} />
+      <Route path="/payment/cancel" element={<PaymentCancel />} />
+      <Route path="*" element={<div>Not found</div>} />
     </>
   ),
   {

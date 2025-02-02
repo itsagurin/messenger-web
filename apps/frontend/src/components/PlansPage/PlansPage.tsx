@@ -146,4 +146,4 @@ const PlansPage: React.FC<PlansPageProps> = ({ className }) => {
   );
 };
 
-export default PlansPage;
+export default React.memo(PlansPage);
