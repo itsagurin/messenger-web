@@ -98,8 +98,18 @@ export class UsersService {
     }
 
     async deleteCurrentUser(userId: number) {
-        return this.prisma.user.delete({
-            where: { id: userId }
+        return this.prisma.$transaction(async (prisma) => {
+            await prisma.subscription.deleteMany({
+                where: { userId: userId }
+            });
+
+            await prisma.message.deleteMany({
+                 where: { senderId: userId }
+            });
+
+            return prisma.user.delete({
+                where: { id: userId }
+            });
         });
     }
 }
