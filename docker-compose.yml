@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: ./apps/frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./apps/frontend:/app
+      - /app/node_modules
+    command: ["npm", "run", "dev"]
+    depends_on:
+      - backend
+    env_file:
+      - .env
+
+  backend:
+    build: ./apps/backend
+    ports:
+      - "4000:4000"
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    volumes:
+      - ./apps/backend:/app
+      - /app/node_modules
+    command: ["npm", "run", "start"]
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+
+  stripe-listener:
+    image: stripe/stripe-cli
+    entrypoint: ["stripe", "listen", "--forward-to", "backend:4000/payment/webhook"]
+    environment:
+      - STRIPE_API_KEY=${STRIPE_API_KEY}
+    depends_on:
+      - backend
+    env_file:
+      - .env
+
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    command: [ "postgres", "-p", "5432" ]
+    env_file:
+      - .env
+
+volumes:
+  pgdata:
