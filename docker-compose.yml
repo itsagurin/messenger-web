@@ -1,10 +1,12 @@
-version: '3.8'
-
 services:
   frontend:
     build: ./apps/frontend
     ports:
       - "5173:5173"
+    environment:
+      - VITE_STRIPE_PUBLISHABLE_KEY=${VITE_STRIPE_PUBLISHABLE_KEY}
+      - VITE_API_URL=${VITE_API_URL}
+      - SECRET_KEY=${SECRET_KEY}
     volumes:
       - ./apps/frontend:/app
       - /app/node_modules
@@ -19,7 +21,15 @@ services:
     ports:
       - "4000:4000"
     environment:
-      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - DATABASE_URL=${DATABASE_URL}
+      - SECRET_KEY=${SECRET_KEY}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - STRIPE_BASIC_PRICE_ID=${STRIPE_BASIC_PRICE_ID}
+      - STRIPE_PLUS_PRICE_ID=${STRIPE_PLUS_PRICE_ID}
+      - STRIPE_PREMIUM_PRICE_ID=${STRIPE_PREMIUM_PRICE_ID}
+      - FRONTEND_URL=${FRONTEND_URL}
     volumes:
       - ./apps/backend:/app
       - /app/node_modules
@@ -32,13 +42,11 @@ services:
 
   stripe-listener:
     image: stripe/stripe-cli
-    entrypoint: ["stripe", "listen", "--forward-to", "backend:4000/payment/webhook"]
+    command: [ "stripe", "listen", "--webhook-secret", "${STRIPE_WEBHOOK_SECRET}", "--forward-to", "backend:4000/payment/webhook" ]
     environment:
-      - STRIPE_API_KEY=${STRIPE_API_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
     depends_on:
       - backend
-    env_file:
-      - .env
 
   db:
     image: postgres:15
