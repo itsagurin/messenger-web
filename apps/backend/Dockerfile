@@ -17,8 +17,6 @@ RUN rm -rf node_modules
 RUN npm cache clean --force
 RUN npm ci
 
-RUN npx prisma generate
-
 COPY . .
 
 COPY init.sh .
@@ -28,4 +26,4 @@ RUN npm uninstall bcrypt && npm install bcrypt
 
 EXPOSE 4000
 
-CMD ["./init.sh"]
+CMD ["sh", "./init.sh"]
