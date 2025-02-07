@@ -40,10 +40,14 @@ services:
       - .env
 
   stripe-listener:
-    image: stripe/stripe-cli
-    command: [ "stripe", "listen", "--webhook-secret", "${STRIPE_WEBHOOK_SECRET}", "--forward-to", "backend:4000/payment/webhook" ]
+    image: stripe/stripe-cli:v1.22.0
+    command: [
+      "listen",
+      "--api-key", "${STRIPE_SECRET_KEY}",
+      "--forward-to", "backend:4000/payment/webhook"
+    ]
     environment:
-      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
     depends_on:
       - backend
 
