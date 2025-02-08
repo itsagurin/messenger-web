@@ -6,5 +6,25 @@
   {
     "email": "artem@example.com",
     "password": "artem"
+  },
+  {
+    "email": "mike@example.com",
+    "password": "mike"
+  },
+  {
+    "email": "kate@example.com",
+    "password": "kate"
+  },
+  {
+    "email": "adam@example.com",
+    "password": "adam"
+  },
+  {
+    "email": "james@example.com",
+    "password": "james"
+  },
+  {
+    "email": "richard@example.com",
+    "password": "richard"
   }
 ]
