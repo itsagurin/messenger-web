@@ -253,6 +253,23 @@ export class PaymentService implements OnModuleInit {
     }
   }
 
+  async getAllSubscriptions() {
+    return this.prisma.subscription.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            createdAt: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+  }
+
   private async handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     if (!session.metadata?.userId) {
       throw new Error('No userId in session metadata');

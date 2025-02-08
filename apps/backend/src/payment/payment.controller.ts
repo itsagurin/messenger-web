@@ -1,18 +1,18 @@
 import {
-  Controller,
-  Post,
   Body,
-  UseGuards,
-  Req,
-  Headers,
-  ValidationPipe,
-  UsePipes,
-  Logger,
-  RawBodyRequest,
+  Controller,
   Get,
+  Headers,
+  Logger,
   NotFoundException,
   Param,
   ParseIntPipe,
+  Post,
+  RawBodyRequest,
+  Req,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { CreateSubscriptionDto } from './dto/subscription.dto';
@@ -67,5 +67,24 @@ export class PaymentController {
 
     this.logger.log(`Raw body length: ${req.rawBody.length}`);
     return this.paymentService.handleWebhook(signature, req.rawBody);
+  }
+
+  @Get('subscriptions')
+  @UseGuards(JwtStrategy)
+  async getAllSubscriptions() {
+    this.logger.log('Fetching all subscriptions');
+    try {
+      const subscriptions = await this.paymentService.getAllSubscriptions();
+      return {
+        success: true,
+        data: subscriptions
+      };
+    } catch (error) {
+      this.logger.error('Failed to fetch subscriptions:', error);
+      return {
+        success: false,
+        message: error.message
+      };
+    }
   }
 }
