@@ -1,2 +1,8 @@
 .env
 .idea/
+
+/dist
+/node_modules
+/build
+
+.turbo

@@ -69,8 +69,8 @@ services:
       - DB_PASSWORD=${POSTGRES_PASSWORD}
       - WEBSOCKETS_ENABLED=true
     volumes:
-      - ./directus/uploads:/directus/uploads
-      - ./directus/extensions:/directus/extensions
+      - ./apps/directus/uploads:/directus/uploads
+      - ./apps/directus/extensions:/directus/extensions
     depends_on:
       db:
         condition: service_healthy
