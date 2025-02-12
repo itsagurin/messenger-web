@@ -17,7 +17,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
   const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value);
   const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
       setError('');
       if (!email || !password) {
@@ -49,23 +50,25 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
       <div className="table">
         <div className="table-cell">
           {error && <div style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
-          <input
-            name="email-login"
-            placeholder="Email"
-            type="text"
-            value={email}
-            onChange={handleEmailChange}
-          />
-          <input
-            name="password-login"
-            placeholder="Password"
-            type="password"
-            value={password}
-            onChange={handlePasswordChange}
-          />
-          <div className="btn login-button" onClick={handleSubmit}>
-            Log in
-          </div>
+          <form onSubmit={handleSubmit}>
+            <input
+              name="email-login"
+              placeholder="Email"
+              type="text"
+              value={email}
+              onChange={handleEmailChange}
+            />
+            <input
+              name="password-login"
+              placeholder="Password"
+              type="password"
+              value={password}
+              onChange={handlePasswordChange}
+            />
+            <button type="submit" className="btn login-button">
+              Log in
+            </button>
+          </form>
         </div>
       </div>
     </div>

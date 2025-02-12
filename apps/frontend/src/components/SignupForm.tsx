@@ -17,7 +17,8 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
   const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value);
   const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
       setError('');
       if (!email || !password) {
@@ -54,23 +55,25 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
       <div className="table">
         <div className="table-cell">
           {error && <div style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
-          <input
-            name="email-signup"
-            placeholder="Email"
-            type="text"
-            value={email}
-            onChange={handleEmailChange}
-          />
-          <input
-            name="password-signup"
-            placeholder="Password"
-            type="password"
-            value={password}
-            onChange={handlePasswordChange}
-          />
-          <div className="btn signup-button" onClick={handleSubmit}>
-            Sign up
-          </div>
+          <form onSubmit={handleSubmit}>
+            <input
+              name="email-signup"
+              placeholder="Email"
+              type="text"
+              value={email}
+              onChange={handleEmailChange}
+            />
+            <input
+              name="password-signup"
+              placeholder="Password"
+              type="password"
+              value={password}
+              onChange={handlePasswordChange}
+            />
+            <button type="submit" className="btn signup-button">
+              Sign up
+            </button>
+          </form>
         </div>
       </div>
     </div>
