@@ -26,27 +26,33 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
         return;
       }
 
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        setError('Please enter a valid email address');
+        return;
+      }
+
       const result = await authService.register({ email, password });
 
       if (result.success) {
         authService.setTokens(result.accessToken, result.refreshToken);
-
-        const user = {
+        setCurrentUser({
           userId: result.data.userId,
           email: result.data.email,
-        };
-        setCurrentUser(user);
-
+        });
         navigate('/main');
-
         if (onSignupSuccess) {
           onSignupSuccess();
         }
       } else {
-        setError(result.message || 'Registration error');
+        if (result.message?.includes('already exists')) {
+          setError('This email is already registered. Please use a different email or login.');
+        } else {
+          setError(result.message ?? 'Registration failed. Please try again.');
+        }
       }
-    } catch (error: any) {
-      setError(error.message || 'An unexpected error occurred');
+    } catch (error) {
+      setError('An unexpected error occurred. Please try again later.');
     }
   };
 
@@ -54,7 +60,19 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
     <div className="form-item sign-up">
       <div className="table">
         <div className="table-cell">
-          {error && <div style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
+          {error && (
+            <div className="error-message" style={{
+              color: '#ff3333',
+              backgroundColor: '#ffebeb',
+              padding: '10px',
+              borderRadius: '4px',
+              marginBottom: '15px',
+              fontSize: '14px',
+              textAlign: 'center'
+            }}>
+              {error}
+            </div>
+          )}
           <form onSubmit={handleSubmit}>
             <input
               name="email-signup"

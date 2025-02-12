@@ -85,10 +85,8 @@ class AuthService implements AuthServiceInterface {
 
     if (result.success) {
       this.setTokens(result.accessToken, result.refreshToken);
-      return result;
     }
-
-    throw new Error('Login failed');
+    return result;
   }
 
   async register(data: RegisterRequest): Promise<AuthResponse> {
@@ -100,10 +98,8 @@ class AuthService implements AuthServiceInterface {
 
     if (result.success) {
       this.setTokens(result.accessToken, result.refreshToken);
-      return result;
     }
-
-    throw new Error('Registration failed');
+    return result;
   }
 
   async refreshTokens(): Promise<boolean> {

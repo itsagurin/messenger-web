@@ -30,18 +30,22 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
 
       if (result.success) {
         authService.setTokens(result.accessToken, result.refreshToken);
-
         setCurrentUser({ userId: result.data.userId, email: result.data.email });
         navigate('/main');
-
         if (onLoginSuccess) {
           onLoginSuccess();
         }
       } else {
-        setError(result.message || 'Login error');
+        if (result.message?.includes('No user with this email')) {
+          setError('Account not found. Please check your email.');
+        } else if (result.message?.includes('Incorrect password')) {
+          setError('Invalid password. Please try again.');
+        } else {
+          setError(result.message ?? 'Login failed. Please try again.');
+        }
       }
-    } catch (error: any) {
-      setError(error.message || 'Login error');
+    } catch (error) {
+      setError('An unexpected error occurred. Please try again later.');
     }
   };
 
@@ -49,7 +53,19 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
     <div className="form-item log-in">
       <div className="table">
         <div className="table-cell">
-          {error && <div style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
+          {error && (
+            <div className="error-message" style={{
+              color: '#ff3333',
+              backgroundColor: '#ffebeb',
+              padding: '10px',
+              borderRadius: '4px',
+              marginBottom: '15px',
+              fontSize: '14px',
+              textAlign: 'center'
+            }}>
+              {error}
+            </div>
+          )}
           <form onSubmit={handleSubmit}>
             <input
               name="email-login"
