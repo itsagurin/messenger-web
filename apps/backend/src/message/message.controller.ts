@@ -8,6 +8,7 @@ export class MessageController {
   constructor(private readonly messageService: MessageService) {}
 
   @Post('send')
+  @UseGuards(AuthGuard('jwt'))
   async sendMessage(@Body() createMessageDto: CreateMessageDto) {
     return await this.messageService.sendMessage(createMessageDto);
   }
@@ -19,6 +20,7 @@ export class MessageController {
   }
 
   @Get('unread/:receiverId')
+  @UseGuards(AuthGuard('jwt'))
   async getUnreadCount(@Param('receiverId') receiverId: string) {
     const receiverIdNum = parseInt(receiverId, 10);
     if (isNaN(receiverIdNum)) {
@@ -28,6 +30,7 @@ export class MessageController {
   }
 
   @Post('mark-read/:senderId/:receiverId')
+  @UseGuards(AuthGuard('jwt'))
   async markMessagesAsRead(
     @Param('senderId') senderId: string,
     @Param('receiverId') receiverId: string,
@@ -48,6 +51,7 @@ export class MessageController {
   }
 
   @Get('conversation/:currentUserId/:selectedUserId')
+  @UseGuards(AuthGuard('jwt'))
   async getMessages(
     @Param('currentUserId') currentUserId: string,
     @Param('selectedUserId') selectedUserId: string

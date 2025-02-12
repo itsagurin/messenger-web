@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import { useUser } from '../../services/userContext';
 import './Chat.css';
+import { authService } from '../../services/authService.ts';
 
 interface User {
   id: number;
@@ -111,7 +112,13 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
 
   useEffect(() => {
     if (selectedUser && currentUser) {
-      fetch(`http://localhost:4000/messages/conversation/${currentUser.userId}/${selectedUser.id}`)
+
+      fetch(`http://localhost:4000/messages/conversation/${currentUser.userId}/${selectedUser.id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${authService.getAccessToken()}`,
+        },
+      })
         .then((response) => response.json())
         .then((data) => setMessages(Array.isArray(data) ? data : []));
     }
@@ -125,7 +132,12 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
     if (!currentUser) return;
 
     const updateUnreadCounts = () => {
-      fetch(`http://localhost:4000/messages/unread/${currentUser.userId}`)
+      fetch(`http://localhost:4000/messages/unread/${currentUser.userId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${authService.getAccessToken()}`,
+        },
+      })
         .then(response => response.json())
         .then(data => {
           if (selectedUser) {
@@ -160,10 +172,17 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
 
     fetch(`http://localhost:4000/messages/mark-read/${user.id}/${currentUser.userId}`, {
       method: 'POST',
-    })
-      .catch(err => console.error('Failed to mark messages as read:', err));
+      headers: {
+        'Authorization': `Bearer ${authService.getAccessToken()}`,
+      },
+    }).catch(err => console.error('Failed to mark messages as read:', err));
 
-    fetch(`http://localhost:4000/messages/unread/${currentUser.userId}`)
+    fetch(`http://localhost:4000/messages/unread/${currentUser.userId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${authService.getAccessToken()}`,
+      },
+    })
       .then(response => response.json())
       .then(data => {
         const newData = { ...data };
@@ -178,6 +197,7 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
     if (!newMessage.trim() || !selectedUser || !currentUser) return;
 
     try {
+
       const messageData = {
         senderId: currentUser.userId,
         receiverId: selectedUser.id,
@@ -188,6 +208,7 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authService.getAccessToken()}`,
         },
         body: JSON.stringify(messageData),
       });
