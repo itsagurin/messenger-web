@@ -42,6 +42,10 @@ Create a `.env` file in the root directory using `.env.example`
 
 To use Turborepo:
 Create a `.env.local` file in the backend directory using `.env.local.example`
+**IMPORTANT: If you run the project locally via Turborepo, the stripe listener must be started separately with the command:**
+```bash
+stripe listen --api-key STRIPE_SECRET_KEY --forward-to localhost:4000/payment/webhook
+```
 
 ## 🚀 Getting Started
 
