@@ -27,6 +27,7 @@ This project is a full-stack application featuring user authentication, real-tim
 ### Infrastructure
 - Docker & Docker Compose
 - Directus (Admin Panel)
+- Turborepo (for local development not related to Docker | doesn't run Directus, only front + back)
 
 ## 📋 Prerequisites
 
@@ -38,6 +39,9 @@ Before you begin, ensure you have the following installed:
 ## 🔑 Environment Variables
 
 Create a `.env` file in the root directory using `.env.example`
+
+To use Turborepo:
+Create a `.env.local` file in the backend directory using `.env.local.example`
 
 ## 🚀 Getting Started
 
