@@ -27,7 +27,7 @@ This project is a full-stack application featuring user authentication, real-tim
 ### Infrastructure
 - Docker & Docker Compose
 - Directus (Admin Panel)
-- Turborepo (for local development not related to Docker | doesn't run Directus, only front + back)
+- Turborepo **(IMPORTANT: only for local development, NOT related to Docker | doesn't run Directus, only front + back!)**
 
 ## 📋 Prerequisites
 
