@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useUser } from '../services/userContext.tsx';
 
-const API_URL = 'http://localhost:4000';
+const API_URL = import.meta.env.VITE_API_URL;
 
 type PlanType = 'BASIC' | 'PLUS' | 'PREMIUM';
 

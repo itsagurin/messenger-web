@@ -39,7 +39,6 @@ export class UsersGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (userEmail && typeof userEmail === 'string') {
       this.connectedUsers.set(client.id, userEmail);
 
-      // Получаем пользователя по email и сохраняем его socket id
       const user = await this.usersService.findByEmail(userEmail);
       if (user) {
         this.userSockets.set(user.id, client.id);

@@ -11,6 +11,7 @@ export class PaymentService implements OnModuleInit {
   private stripe: Stripe;
   private readonly logger = new Logger(PaymentService.name);
   private frontendUrl: string;
+  private plans: ReturnType<typeof SUBSCRIPTION_PLANS>;
 
   constructor(
     private prisma: PrismaService,
@@ -22,15 +23,20 @@ export class PaymentService implements OnModuleInit {
     }
 
     this.stripe = new Stripe(stripeKey, {
-      apiVersion: '2024-12-18.acacia',
+      apiVersion: this.config.get('STRIPE_API_VERSION'),
     });
+
+    this.plans = SUBSCRIPTION_PLANS(this.config);
   }
 
   onModuleInit() {
     const requiredConfigs = [
       'STRIPE_SECRET_KEY',
       'STRIPE_WEBHOOK_SECRET',
-      'FRONTEND_URL'
+      'FRONTEND_URL',
+      'STRIPE_BASIC_PRICE_ID',
+      'STRIPE_PLUS_PRICE_ID',
+      'STRIPE_PREMIUM_PRICE_ID'
     ];
 
     for (const config of requiredConfigs) {
@@ -42,6 +48,13 @@ export class PaymentService implements OnModuleInit {
 
     this.frontendUrl = this.config.get('FRONTEND_URL');
     this.logger.log(`Initialized PaymentService with frontend URL: ${this.frontendUrl}`);
+
+    Object.entries(this.plans).forEach(([planName, plan]) => {
+      this.logger.log(`Plan ${planName} has Stripe ID: ${plan.stripeId}`);
+      if (!plan.stripeId) {
+        throw new Error(`Stripe ID for plan ${planName} is not configured`);
+      }
+    });
   }
 
   @Cron('0 0 * * *')
@@ -155,12 +168,19 @@ export class PaymentService implements OnModuleInit {
     successUrl.searchParams.append('session_id', '{CHECKOUT_SESSION_ID}');
     const cancelUrl = new URL('/payment/cancel', this.frontendUrl);
 
+    const stripeId = this.plans[planType].stripeId;
+    if (!stripeId) {
+      throw new Error(`Missing Stripe price ID for plan ${planType}`);
+    }
+
+    this.logger.log(`Using Stripe price ID for ${planType}: ${stripeId}`);
+
     const session = await this.stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [{
-        price: SUBSCRIPTION_PLANS[planType].stripeId,
+        price: stripeId,
         quantity: 1,
       }],
       metadata: {

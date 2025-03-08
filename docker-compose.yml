@@ -1,6 +1,8 @@
 services:
   frontend:
-    build: ./apps/frontend
+    build:
+      context: .
+      dockerfile: ./apps/frontend/Dockerfile
     ports:
       - "5173:5173"
     environment:
@@ -8,19 +10,22 @@ services:
       - VITE_API_URL=${VITE_API_URL}
       - SECRET_KEY=${SECRET_KEY}
     volumes:
-      - ./apps/frontend:/app
+      - .:/app
       - /app/node_modules
-    command: ["npm", "run", "dev"]
     depends_on:
       - backend
     env_file:
       - .env
+    command: ["npm", "run", "--prefix", "/app/apps/frontend", "dev"]
 
   backend:
-    build: ./apps/backend
+    build:
+      context: .
+      dockerfile: ./apps/backend/Dockerfile
     ports:
       - "4000:4000"
     environment:
+      - NODE_ENV=production
       - DATABASE_URL=${DATABASE_URL}
       - SECRET_KEY=${SECRET_KEY}
       - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
@@ -29,9 +34,10 @@ services:
       - STRIPE_BASIC_PRICE_ID=${STRIPE_BASIC_PRICE_ID}
       - STRIPE_PLUS_PRICE_ID=${STRIPE_PLUS_PRICE_ID}
       - STRIPE_PREMIUM_PRICE_ID=${STRIPE_PREMIUM_PRICE_ID}
+      - STRIPE_API_VERSION=${STRIPE_API_VERSION}
       - FRONTEND_URL=${FRONTEND_URL}
     volumes:
-      - ./apps/backend:/app
+      - .:/app
       - /app/node_modules
     depends_on:
       db:
@@ -68,6 +74,8 @@ services:
       - DB_USER=${POSTGRES_USER}
       - DB_PASSWORD=${POSTGRES_PASSWORD}
       - WEBSOCKETS_ENABLED=true
+      - CACHE_ENABLED=true
+      - RATE_LIMITER_ENABLED=true
     volumes:
       - ./apps/directus/uploads:/directus/uploads
       - ./apps/directus/extensions:/directus/extensions
@@ -85,15 +93,22 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./postgres-data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
-    command: [ "postgres", "-p", "5432" ]
+    command: ["postgres", "-p", "5432"]
     env_file:
       - .env
 
+#  redis:
+#    image: redis:alpine
+#    restart: always
+#    ports:
+#      - "6379:6379"
+
 volumes:
   pgdata:
+  pgadmin:
