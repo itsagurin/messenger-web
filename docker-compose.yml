@@ -26,6 +26,7 @@ services:
       - "4000:4000"
     environment:
       - NODE_ENV=production
+      - SEED_DATABASE=${SEED_DATABASE:-false}
       - DATABASE_URL=${DATABASE_URL}
       - SECRET_KEY=${SECRET_KEY}
       - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
