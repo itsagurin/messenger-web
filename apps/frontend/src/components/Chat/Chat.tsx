@@ -111,17 +111,28 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
   }, [selectedUser, currentUser]);
 
   useEffect(() => {
-    if (selectedUser && currentUser) {
+    const fetchMessages = async () => {
+      if (selectedUser && currentUser) {
+        try {
+          const response = await fetch(
+            `${import.meta.env.VITE_API_URL}/messages/conversation/${currentUser.userId}/${selectedUser.id}`,
+            {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${authService.getAccessToken()}`,
+              },
+            }
+          );
 
-      fetch(`${import.meta.env.VITE_API_URL}/messages/conversation/${currentUser.userId}/${selectedUser.id}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${authService.getAccessToken()}`,
-        },
-      })
-        .then((response) => response.json())
-        .then((data) => setMessages(Array.isArray(data) ? data : []));
-    }
+          const data = await response.json();
+          setMessages(Array.isArray(data) ? data : []);
+        } catch (error) {
+          console.error('Error fetching messages:', error);
+        }
+      }
+    };
+
+    fetchMessages();
   }, [selectedUser, currentUser]);
 
   useEffect(() => {
@@ -131,24 +142,30 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
   useEffect(() => {
     if (!currentUser) return;
 
-    const updateUnreadCounts = () => {
-      fetch(`${import.meta.env.VITE_API_URL}/messages/unread/${currentUser.userId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${authService.getAccessToken()}`,
-        },
-      })
-        .then(response => response.json())
-        .then(data => {
-          if (selectedUser) {
-            const newData = { ...data };
-            delete newData[selectedUser.id];
-            setUnreadCounts(newData);
-          } else {
-            setUnreadCounts(data);
+    const updateUnreadCounts = async () => {
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/messages/unread/${currentUser.userId}`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${authService.getAccessToken()}`,
+            },
           }
-        })
-        .catch(err => console.error('Failed to fetch unread counts:', err));
+        );
+
+        const data = await response.json();
+
+        if (selectedUser) {
+          const newData = { ...data };
+          delete newData[selectedUser.id];
+          setUnreadCounts(newData);
+        } else {
+          setUnreadCounts(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch unread counts:', err);
+      }
     };
 
     updateUnreadCounts();
@@ -158,7 +175,7 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
     return () => clearInterval(interval);
   }, [currentUser, selectedUser]);
 
-  const handleSelectUser = (user: User) => {
+  const handleSelectUser = async (user: User) => {
     if (!currentUser || selectedUser?.id === user.id) return;
 
     setSelectedUser(user);
@@ -170,26 +187,34 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
       return newCounts;
     });
 
-    fetch(`${import.meta.env.VITE_API_URL}/messages/mark-read/${user.id}/${currentUser.userId}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${authService.getAccessToken()}`,
-      },
-    }).catch(err => console.error('Failed to mark messages as read:', err));
+    try {
+      await fetch(
+        `${import.meta.env.VITE_API_URL}/messages/mark-read/${user.id}/${currentUser.userId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authService.getAccessToken()}`,
+          },
+        }
+      );
 
-    fetch(`${import.meta.env.VITE_API_URL}/messages/unread/${currentUser.userId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${authService.getAccessToken()}`,
-      },
-    })
-      .then(response => response.json())
-      .then(data => {
-        const newData = { ...data };
-        delete newData[user.id];
-        setUnreadCounts(newData);
-      })
-      .catch(err => console.error('Failed to fetch unread counts:', err));
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/messages/unread/${currentUser.userId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${authService.getAccessToken()}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+      const newData = { ...data };
+      delete newData[user.id];
+      setUnreadCounts(newData);
+    } catch (err) {
+      console.error('Failed to update message status:', err);
+    }
   };
 
   const handleSendMessage = async (e?: React.FormEvent) => {
