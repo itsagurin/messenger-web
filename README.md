@@ -48,14 +48,19 @@ stripe listen --api-key STRIPE_SECRET_KEY --forward-to localhost:4000/payment/we
 ```
 
 ## 🚀 Getting Started
-
+   
 1. Clone the repository:
 ```bash
 git clone <repository-url>
 cd <project-directory>
 ```
 
-2. Start the services using Docker Compose:
+2. If you want the database to be automatically populated with fixtures, then in `.env` select
+```bash
+SEED_DATABASE=true
+```
+
+3. Start the services using Docker Compose:
 ```bash
 docker compose up --build
 ```
