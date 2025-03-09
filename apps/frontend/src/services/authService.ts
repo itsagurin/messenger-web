@@ -78,7 +78,7 @@ class AuthService implements AuthServiceInterface {
 
   async login(data: LoginRequest): Promise<AuthResponse> {
     const result = await this.makeRequest<AuthResponse>(
-      'http://localhost:4000/auth/login',
+      `${import.meta.env.VITE_API_URL}/auth/login`,
       'POST',
       data
     );
@@ -91,7 +91,7 @@ class AuthService implements AuthServiceInterface {
 
   async register(data: RegisterRequest): Promise<AuthResponse> {
     const result = await this.makeRequest<AuthResponse>(
-      'http://localhost:4000/auth/register',
+      `${import.meta.env.VITE_API_URL}/auth/register`,
       'POST',
       data
     );
@@ -108,7 +108,7 @@ class AuthService implements AuthServiceInterface {
       if (!refreshToken) throw new Error('No refresh token available');
 
       const result = await this.makeRequest<AuthResponse>(
-        'http://localhost:4000/auth/refresh',
+        `${import.meta.env.VITE_API_URL}/auth/refresh`,
         'POST',
         { refreshToken }
       );

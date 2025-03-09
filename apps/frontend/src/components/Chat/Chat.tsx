@@ -40,7 +40,7 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
 
     if (!currentUser) return;
 
-    const socket = io('http://localhost:4000', {
+    const socket = io(`${import.meta.env.VITE_API_URL}`, {
       query: { User: currentUser.email },
       reconnection: true,
       reconnectionAttempts: 5,
@@ -113,7 +113,7 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
   useEffect(() => {
     if (selectedUser && currentUser) {
 
-      fetch(`http://localhost:4000/messages/conversation/${currentUser.userId}/${selectedUser.id}`, {
+      fetch(`${import.meta.env.VITE_API_URL}/messages/conversation/${currentUser.userId}/${selectedUser.id}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authService.getAccessToken()}`,
@@ -132,7 +132,7 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
     if (!currentUser) return;
 
     const updateUnreadCounts = () => {
-      fetch(`http://localhost:4000/messages/unread/${currentUser.userId}`, {
+      fetch(`${import.meta.env.VITE_API_URL}/messages/unread/${currentUser.userId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authService.getAccessToken()}`,
@@ -170,14 +170,14 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
       return newCounts;
     });
 
-    fetch(`http://localhost:4000/messages/mark-read/${user.id}/${currentUser.userId}`, {
+    fetch(`${import.meta.env.VITE_API_URL}/messages/mark-read/${user.id}/${currentUser.userId}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${authService.getAccessToken()}`,
       },
     }).catch(err => console.error('Failed to mark messages as read:', err));
 
-    fetch(`http://localhost:4000/messages/unread/${currentUser.userId}`, {
+    fetch(`${import.meta.env.VITE_API_URL}/messages/unread/${currentUser.userId}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${authService.getAccessToken()}`,
@@ -204,7 +204,7 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
         text: newMessage,
       };
 
-      const response = await fetch('http://localhost:4000/messages/send', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/messages/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
