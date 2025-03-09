@@ -1,7 +1,7 @@
 import React, { useState, ChangeEvent } from 'react';
-import { authService } from '../services/authService';
+import { authService } from '../../services/authService.ts';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '../services/userContext';
+import { useUser } from '../../services/userContext.tsx';
 
 interface SignupFormProps {
   onSignupSuccess?: () => void;

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import LoginForm from './components/LoginForm';
-import SignupForm from './components/SignupForm';
+import LoginForm from './components/AuthForms/LoginForm.tsx';
+import SignupForm from './components/AuthForms/SignupForm.tsx';
 import './App.css';
 import { UserProvider } from './services/userContext.tsx';
 
