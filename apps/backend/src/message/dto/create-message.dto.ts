@@ -1,4 +1,5 @@
-import { IsNotEmpty, IsNumber, IsString, Min, IsPositive } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString, IsPositive, IsEnum } from 'class-validator';
+import { MessageStatus } from '@prisma/client';
 
 export class CreateMessageDto {
   @IsNumber()
@@ -12,4 +13,7 @@ export class CreateMessageDto {
   @IsNotEmpty()
   @IsString()
   text: string;
+
+  @IsEnum(MessageStatus)
+  status?: MessageStatus;
 }

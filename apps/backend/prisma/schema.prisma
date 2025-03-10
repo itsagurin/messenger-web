@@ -15,11 +15,11 @@ datasource db {
 
 model User {
   id               Int           @id @default(autoincrement())
-  email            String        @unique
-  password         String
-  refreshToken     String?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  email            String        @unique @map("email")
+  password         String        @map("password")
+  refreshToken     String?       @map("refresh_token")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
   messagesSent     Message[]     @relation("SentMessages")
   messagesReceived Message[]     @relation("ReceivedMessages")
   subscription     Subscription?
@@ -28,12 +28,12 @@ model User {
 }
 
 model Message {
-  id         Int      @id @default(autoincrement())
-  senderId   Int
-  receiverId Int
-  text       String
-  createdAt  DateTime @default(now())
-  status     String   @default("sent") // "sent", "read"
+  id         Int           @id @default(autoincrement()) @map("id")
+  senderId   Int           @map("sender_id")
+  receiverId Int           @map("receiver_id")
+  text       String        @map("text")
+  createdAt  DateTime      @default(now()) @map("created_at")
+  status     MessageStatus @default(SENT) @map("status")
 
   sender   User @relation("SentMessages", fields: [senderId], references: [id])
   receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id])
@@ -41,18 +41,23 @@ model Message {
   @@map("message")
 }
 
+enum MessageStatus {
+  SENT
+  READ
+}
+
 model Subscription {
-  id                   Int       @id @default(autoincrement())
-  userId               Int       @unique
+  id                   Int       @id @default(autoincrement()) @map("id")
+  userId               Int       @unique @map("user_id")
   user                 User      @relation(fields: [userId], references: [id])
-  planType             PlanType  @default(BASIC)
-  stripeCustomerId     String?
-  stripeSubscriptionId String?
-  status               SubStatus @default(ACTIVE)
-  currentPeriodStart   DateTime?
-  currentPeriodEnd     DateTime?
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  planType             PlanType  @default(BASIC) @map("plan_type")
+  stripeCustomerId     String?   @map("stripe_customer_id")
+  stripeSubscriptionId String?   @map("stripe_subscription_id")
+  status               SubStatus @default(ACTIVE) @map("status")
+  currentPeriodStart   DateTime? @map("current_period_start")
+  currentPeriodEnd     DateTime? @map("current_period_end")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
 }
 
 enum PlanType {

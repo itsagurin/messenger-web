@@ -1,20 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { MessageStatus } from '@prisma/client';
 
 @Injectable()
 export class MessageService {
   constructor(private readonly prisma: PrismaService) {}
 
   async sendMessage(createMessageDto: CreateMessageDto) {
-    const { senderId, receiverId, text } = createMessageDto;
+    const { senderId, receiverId, text, status = MessageStatus.SENT } = createMessageDto;
 
     const message = await this.prisma.message.create({
       data: {
         senderId,
         receiverId,
         text,
-        status: 'sent',
+        status,
       },
     });
 
@@ -44,10 +45,10 @@ export class MessageService {
       where: {
         senderId,
         receiverId,
-        status: 'sent',
+        status: MessageStatus.SENT,
       },
       data: {
-        status: 'read',
+        status: MessageStatus.READ,
       },
     });
   }
@@ -57,7 +58,7 @@ export class MessageService {
       by: ['senderId'],
       where: {
         receiverId,
-        status: 'sent',
+        status: MessageStatus.SENT,
       },
       _count: {
         senderId: true,
@@ -80,5 +81,4 @@ export class MessageService {
       },
     });
   }
-
 }

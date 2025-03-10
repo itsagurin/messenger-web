@@ -1,10 +1,10 @@
 #!/bin/sh
 
-echo "Running migrations..."
-npx prisma migrate deploy --schema=./apps/backend/prisma/schema.prisma
-
 echo "Generating Prisma client..."
 npx prisma generate --schema=./apps/backend/prisma/schema.prisma
+
+echo "Running migrations..."
+npx prisma migrate deploy --schema=./apps/backend/prisma/schema.prisma
 
 # Check if the database needs to be filled in
 if [ "$SEED_DATABASE" = "true" ]; then
