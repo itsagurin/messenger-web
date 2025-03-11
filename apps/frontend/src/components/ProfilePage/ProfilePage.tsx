@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import styles from './ProfilePage.module.css';
 import { useUser } from '../../services/userContext.tsx';
 import { authService } from '../../services/authService.ts';
@@ -27,6 +28,14 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ className }) => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  const axiosInstance = axios.create({
+    baseURL: import.meta.env.VITE_API_URL,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authService.getAccessToken()}`
+    }
+  });
+
   const fetchCurrentPlan = async () => {
     setIsLoading(true);
     setError(null);
@@ -40,28 +49,19 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ className }) => {
         throw new Error('No access token available');
       }
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/payment/current-plan/${currentUser.userId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-      });
+      const response = await axiosInstance.get(
+        `/payment/current-plan/${currentUser.userId}`
+      );
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to fetch current plan: ${errorText}`);
-      }
-
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Received non-JSON response from server');
-      }
-
-      const data: SubscriptionResponse = await response.json();
+      const data: SubscriptionResponse = response.data;
       setSubscription(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch current plan');
+      if (axios.isAxiosError(err)) {
+        const errorMessage = err.response?.data || err.message;
+        setError(`Failed to fetch current plan: ${errorMessage}`);
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to fetch current plan');
+      }
       console.error('Error fetching current plan:', err);
     } finally {
       setIsLoading(false);
@@ -84,15 +84,9 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ className }) => {
           throw new Error('No access token available');
         }
 
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/delete-account`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        const response = await axiosInstance.delete('/auth/delete-account');
 
-        const data = await response.json();
+        const data = response.data;
 
         if (data.success) {
           authService.clearTokens();

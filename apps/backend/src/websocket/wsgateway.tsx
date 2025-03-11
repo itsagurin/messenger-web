@@ -25,8 +25,8 @@ export class UsersGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
-  private connectedUsers: Map<string, string> = new Map(); // socketId -> email
-  private userSockets: Map<number, string> = new Map(); // userId -> socketId
+  private connectedUsers: Map<string, string> = new Map();
+  private userSockets: Map<number, string> = new Map();
 
   constructor(
     private readonly usersService: UsersService,

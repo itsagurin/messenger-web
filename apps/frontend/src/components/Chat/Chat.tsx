@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
+import axios from 'axios';
 import { useUser } from '../../services/userContext';
 import './Chat.css';
 import { authService } from '../../services/authService.ts';
@@ -35,9 +36,15 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [unreadCounts, setUnreadCounts] = useState<{ [key: number]: number }>({});
 
-  useEffect(() => {
-    if (!currentUser) return;
+  const axiosInstance = axios.create({
+    baseURL: import.meta.env.VITE_API_URL,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authService.getAccessToken()}`
+    }
+  });
 
+  useEffect(() => {
     if (!currentUser) return;
 
     const socket = io(`${import.meta.env.VITE_API_URL}`, {
@@ -114,18 +121,11 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
     const fetchMessages = async () => {
       if (selectedUser && currentUser) {
         try {
-          const response = await fetch(
-            `${import.meta.env.VITE_API_URL}/messages/conversation/${currentUser.userId}/${selectedUser.id}`,
-            {
-              method: 'GET',
-              headers: {
-                'Authorization': `Bearer ${authService.getAccessToken()}`,
-              },
-            }
+          const response = await axiosInstance.get(
+            `/messages/conversation/${currentUser.userId}/${selectedUser.id}`
           );
 
-          const data = await response.json();
-          setMessages(Array.isArray(data) ? data : []);
+          setMessages(Array.isArray(response.data) ? response.data : []);
         } catch (error) {
           console.error('Error fetching messages:', error);
         }
@@ -144,17 +144,11 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
 
     const updateUnreadCounts = async () => {
       try {
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/messages/unread/${currentUser.userId}`,
-          {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${authService.getAccessToken()}`,
-            },
-          }
+        const response = await axiosInstance.get(
+          `/messages/unread/${currentUser.userId}`
         );
 
-        const data = await response.json();
+        const data = response.data;
 
         if (selectedUser) {
           const newData = { ...data };
@@ -188,27 +182,15 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
     });
 
     try {
-      await fetch(
-        `${import.meta.env.VITE_API_URL}/messages/mark-read/${user.id}/${currentUser.userId}`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${authService.getAccessToken()}`,
-          },
-        }
+      await axiosInstance.post(
+        `/messages/mark-read/${user.id}/${currentUser.userId}`
       );
 
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/messages/unread/${currentUser.userId}`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${authService.getAccessToken()}`,
-          },
-        }
+      const response = await axiosInstance.get(
+        `/messages/unread/${currentUser.userId}`
       );
 
-      const data = await response.json();
+      const data = response.data;
       const newData = { ...data };
       delete newData[user.id];
       setUnreadCounts(newData);
@@ -222,23 +204,15 @@ const ChatComponent = ({ className }: ChatComponentProps) => {
     if (!newMessage.trim() || !selectedUser || !currentUser) return;
 
     try {
-
       const messageData = {
         senderId: currentUser.userId,
         receiverId: selectedUser.id,
         text: newMessage,
       };
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/messages/send`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authService.getAccessToken()}`,
-        },
-        body: JSON.stringify(messageData),
-      });
+      const response = await axiosInstance.post('/messages/send', messageData);
 
-      const sentMessage = await response.json();
+      const sentMessage = response.data;
 
       setMessages(prevMessages => [...prevMessages, sentMessage]);
 

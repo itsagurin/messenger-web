@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import axios from 'axios';
 import { useUser } from '../services/userContext.tsx';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -27,6 +28,13 @@ interface SubscriptionProviderProps {
   children: ReactNode;
 }
 
+const axiosInstance = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
 export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ children }) => {
   const { currentUser } = useUser();
   const [currentPlan, setCurrentPlan] = useState<PlanType>('BASIC');
@@ -40,21 +48,21 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       }
 
       const token = import.meta.env.SECRET_KEY;
-      const response = await fetch(`${API_URL}/payment/current-plan/${currentUser.userId}`, {
-        method: 'GET',
+
+      const response = await axiosInstance.get(`/payment/current-plan/${currentUser.userId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
-        },
+        }
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch current plan');
-      }
-
-      const data = await response.json();
-      setCurrentPlan(data.plan);
+      setCurrentPlan(response.data.plan);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch current plan');
+      if (axios.isAxiosError(err)) {
+        const errorMessage = err.response?.data?.message || err.message;
+        setError(`Failed to fetch current plan: ${errorMessage}`);
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to fetch current plan');
+      }
       console.error('Error fetching current plan:', err);
     }
   };
@@ -74,20 +82,16 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     setError(null);
 
     try {
-      const response = await fetch(`${API_URL}/payment/create-subscription`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ userId: currentUser.userId, planType }),
-      });
+      const response = await axiosInstance.post('/payment/create-subscription',
+        { userId: currentUser.userId, planType },
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          }
+        }
+      );
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to create subscription');
-      }
+      const data = response.data;
 
       if (planType === 'BASIC') {
         setCurrentPlan(planType);
@@ -101,7 +105,12 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
 
       throw new Error('No checkout URL returned');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      if (axios.isAxiosError(err)) {
+        const errorMessage = err.response?.data?.message || err.message;
+        setError(errorMessage);
+      } else {
+        setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      }
       console.error('Subscription error:', err);
     } finally {
       setIsLoading(false);

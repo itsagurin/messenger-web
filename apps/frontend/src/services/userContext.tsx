@@ -23,10 +23,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (parsedUser.userId && parsedUser.email) {
           setCurrentUser(parsedUser);
         } else {
-          localStorage.removeItem('currentUser'); // Invalid data
+          localStorage.removeItem('currentUser');
         }
       } catch {
-        localStorage.removeItem('currentUser'); // Parsing error
+        localStorage.removeItem('currentUser');
       }
     }
   }, []);

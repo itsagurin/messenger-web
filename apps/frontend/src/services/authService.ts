@@ -1,3 +1,5 @@
+import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+
 interface LoginRequest {
   email: string;
   password: string;
@@ -32,6 +34,16 @@ interface AuthServiceInterface {
 class AuthService implements AuthServiceInterface {
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
+  private axiosInstance: AxiosInstance;
+
+  constructor() {
+    this.axiosInstance = axios.create({
+      baseURL: import.meta.env.VITE_API_URL,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  }
 
   getAccessToken(): string | null {
     return this.accessToken;
@@ -60,25 +72,26 @@ class AuthService implements AuthServiceInterface {
     method: 'POST' | 'GET',
     body?: object
   ): Promise<T> {
-    const response = await fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    });
+    try {
+      const config: AxiosRequestConfig = {
+        method,
+        url,
+        data: body,
+      };
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Request failed');
+      const response = await this.axiosInstance.request<T>(config);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(error.response?.data?.message || 'Request failed');
+      }
+      throw error;
     }
-
-    return response.json();
   }
 
   async login(data: LoginRequest): Promise<AuthResponse> {
     const result = await this.makeRequest<AuthResponse>(
-      `${import.meta.env.VITE_API_URL}/auth/login`,
+      '/auth/login',
       'POST',
       data
     );
@@ -91,7 +104,7 @@ class AuthService implements AuthServiceInterface {
 
   async register(data: RegisterRequest): Promise<AuthResponse> {
     const result = await this.makeRequest<AuthResponse>(
-      `${import.meta.env.VITE_API_URL}/auth/register`,
+      '/auth/register',
       'POST',
       data
     );
@@ -108,7 +121,7 @@ class AuthService implements AuthServiceInterface {
       if (!refreshToken) throw new Error('No refresh token available');
 
       const result = await this.makeRequest<AuthResponse>(
-        `${import.meta.env.VITE_API_URL}/auth/refresh`,
+        '/auth/refresh',
         'POST',
         { refreshToken }
       );
