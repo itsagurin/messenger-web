@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, UseGuards, Param, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Param, ParseIntPipe } from '@nestjs/common';
 import { MessageService } from './message.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { AuthGuard } from '@nestjs/passport';
@@ -19,59 +19,24 @@ export class MessageController {
   }
 
   @Get('unread/:receiverId')
-  async getUnreadCount(@Param('receiverId') receiverId: string) {
-    const receiverIdNum = parseInt(receiverId, 10);
-    if (isNaN(receiverIdNum)) {
-      throw new BadRequestException('Invalid user ID');
-    }
-    return this.messageService.getUnreadCount(receiverIdNum);
+  async getUnreadCount(@Param('receiverId', ParseIntPipe) receiverId: number) {
+    return this.messageService.getUnreadCount(receiverId);
   }
 
   @Post('mark-read/:senderId/:receiverId')
   async markMessagesAsRead(
-    @Param('senderId') senderId: string,
-    @Param('receiverId') receiverId: string,
+    @Param('senderId', ParseIntPipe) senderId: number,
+    @Param('receiverId', ParseIntPipe) receiverId: number,
   ) {
-    const senderIdNum = parseInt(senderId, 10);
-    const receiverIdNum = parseInt(receiverId, 10);
-
-    if (isNaN(senderIdNum)) {
-      throw new BadRequestException(`Invalid senderId: ${senderId}`);
-    }
-
-    if (isNaN(receiverIdNum)) {
-      throw new BadRequestException(`Invalid receiverId: ${receiverId}`);
-    }
-
-    await this.messageService.markMessagesAsRead(senderIdNum, receiverIdNum);
+    await this.messageService.markMessagesAsRead(senderId, receiverId);
     return { success: true };
   }
 
   @Get('conversation/:currentUserId/:selectedUserId')
   async getMessages(
-    @Param('currentUserId') currentUserId: string,
-    @Param('selectedUserId') selectedUserId: string
+    @Param('currentUserId', ParseIntPipe) currentUserId: number,
+    @Param('selectedUserId', ParseIntPipe) selectedUserId: number,
   ) {
-
-    if (!currentUserId || !selectedUserId) {
-      throw new BadRequestException('Both currentUserId and selectedUserId are required');
-    }
-
-    const currentUserIdNum = parseInt(currentUserId, 10);
-    const selectedUserIdNum = parseInt(selectedUserId, 10);
-
-    if (isNaN(currentUserIdNum)) {
-      throw new BadRequestException(`Invalid currentUserId: ${currentUserId}`);
-    }
-
-    if (isNaN(selectedUserIdNum)) {
-      throw new BadRequestException(`Invalid selectedUserId: ${selectedUserId}`);
-    }
-
-    if (currentUserIdNum <= 0 || selectedUserIdNum <= 0) {
-      throw new BadRequestException('User IDs must be positive numbers');
-    }
-
-    return this.messageService.getMessagesForUser(currentUserIdNum, selectedUserIdNum);
+    return this.messageService.getMessagesForUser(currentUserId, selectedUserId);
   }
 }

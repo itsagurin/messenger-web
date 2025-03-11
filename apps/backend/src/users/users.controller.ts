@@ -24,75 +24,64 @@ export class UsersController {
 
   @Post('register')
   async register(@Body() body: { email: string; password: string }) {
-    try {
-      const user = await this.usersService.register(body.email, body.password);
-      const tokens = this.generateTokens(user.userId, user.email);
+    const result = await this.usersService.register(body.email, body.password);
 
-      await this.usersService.updateRefreshToken(user.userId, tokens.refreshToken);
-
-      await this.usersGateway.handleUserAuth(user.email);
+    if (result.success) {
+      const tokens = this.generateTokens(result.data.userId, result.data.email);
+      await this.usersService.updateRefreshToken(result.data.userId, tokens.refreshToken);
+      await this.usersGateway.handleUserAuth(result.data.email);
 
       return {
-        success: true,
-        data: user,
+        ...result,
         ...tokens
       };
-    } catch (error) {
-      console.error('Registration Error:', error);
-      return {
-        success: false,
-        message: error.message,
-      };
     }
+
+    return result;
   }
 
   @Post('login')
   async login(@Body() body: { email: string; password: string }) {
-    try {
-      const user = await this.usersService.login(body.email, body.password);
-      const tokens = this.generateTokens(user.userId, user.email);
+    const result = await this.usersService.login(body.email, body.password);
 
-      await this.usersService.updateRefreshToken(user.userId, tokens.refreshToken);
-
-      await this.usersGateway.handleUserAuth(user.email);
+    if (result.success) {
+      const tokens = this.generateTokens(result.data.userId, result.data.email);
+      await this.usersService.updateRefreshToken(result.data.userId, tokens.refreshToken);
+      await this.usersGateway.handleUserAuth(result.data.email);
 
       return {
-        success: true,
-        data: user,
+        ...result,
         ...tokens
       };
-    } catch (error) {
-      console.error('Login Error:', error);
-      return {
-        success: false,
-        message: error.message,
-      };
     }
+
+    return result;
   }
 
   @Post('refresh')
   async refresh(@Body() body: { refreshToken: string }) {
     try {
       const decoded = this.jwtService.verify(body.refreshToken);
-      const user = await this.usersService.findUserByRefreshToken(body.refreshToken);
+      const result = await this.usersService.refreshToken(body.refreshToken);
 
-      if (!user || user.id !== decoded.sub) {
-        throw new Error('Invalid refresh token');
+      if (result.success && result.userId === decoded.sub) {
+        const tokens = this.generateTokens(result.userId, result.email);
+        await this.usersService.updateRefreshToken(result.userId, tokens.refreshToken);
+
+        return {
+          success: true,
+          ...tokens
+        };
       }
 
-      const tokens = this.generateTokens(user.id, user.email);
-
-      await this.usersService.updateRefreshToken(user.id, tokens.refreshToken);
-
-      return {
-        success: true,
-        ...tokens
-      };
-    } catch (error) {
-      console.error('Refresh Token Error:', error);
       return {
         success: false,
-        message: 'Invalid refresh token',
+        message: 'Invalid refresh token'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Invalid refresh token'
       };
     }
   }
@@ -100,49 +89,19 @@ export class UsersController {
   @Get('users')
   @UseGuards(AuthGuard('jwt'))
   async getAllUsers() {
-    try {
-      return this.usersService.findAll();
-    } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-      };
-    }
+    return this.usersService.findAll();
   }
 
   @Delete('delete-account')
   @UseGuards(AuthGuard('jwt'))
   async deleteCurrentUser(@Req() req: any) {
-    const currentUserId = req.user.userId; // ID from JWT
-    try {
-      await this.usersService.deleteCurrentUser(currentUserId);
-      return {
-        success: true,
-        message: 'Your account has been successfully deleted',
-      };
-    } catch (error) {
-      console.error('Delete Account Error:', error);
-      return {
-        success: false,
-        message: error.message,
-      };
-    }
+    const currentUserId = req.user.userId;
+    return this.usersService.deleteCurrentUser(currentUserId);
   }
 
   @Delete('users/all')
   @UseGuards(AuthGuard('jwt'))
   async deleteAllUsers() {
-    try {
-      await this.usersService.deleteAllUsers();
-      return {
-        success: true,
-        message: 'All users have been deleted successfully'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: error.message
-      };
-    }
+    return this.usersService.deleteAllUsers();
   }
 }

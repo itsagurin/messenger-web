@@ -1,10 +1,11 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import Stripe from 'stripe';
 import { ConfigService } from '@nestjs/config';
 import { PlanType, SubStatus } from '@prisma/client';
 import { SUBSCRIPTION_PLANS } from './constants/plans.constant';
 import { Cron } from '@nestjs/schedule';
+import { CreateSubscriptionDto } from './dto/subscription.dto';
 
 @Injectable()
 export class PaymentService implements OnModuleInit {
@@ -61,188 +62,217 @@ export class PaymentService implements OnModuleInit {
   async checkExpiredSubscriptions() {
     const now = new Date();
 
-    await this.prisma.subscription.updateMany({
-      where: {
-        planType: PlanType.BASIC,
-        currentPeriodEnd: { lte: now },
-        status: SubStatus.ACTIVE,
-      },
-      data: {
-        currentPeriodStart: now,
-        currentPeriodEnd: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
-      },
-    });
-
-    const expiredPaidSubscriptions = await this.prisma.subscription.findMany({
-      where: {
-        currentPeriodEnd: { lte: now },
-        planType: { not: PlanType.BASIC },
-        status: SubStatus.ACTIVE,
-      },
-    });
-
-    for (const subscription of expiredPaidSubscriptions) {
-      if (subscription.stripeSubscriptionId) {
-        try {
-          const stripeSubscription = await this.stripe.subscriptions.retrieve(
-            subscription.stripeSubscriptionId
-          );
-
-          if (stripeSubscription.status === 'active') {
-            await this.prisma.subscription.update({
-              where: { id: subscription.id },
-              data: {
-                currentPeriodStart: new Date(stripeSubscription.current_period_start * 1000),
-                currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
-              },
-            });
-            continue;
-          }
-        } catch (error) {
-          this.logger.error(`Failed to check Stripe subscription: ${error.message}`);
-        }
-      }
-
-      await this.prisma.subscription.update({
-        where: { id: subscription.id },
-        data: {
+    try {
+      await this.prisma.subscription.updateMany({
+        where: {
           planType: PlanType.BASIC,
+          currentPeriodEnd: { lte: now },
           status: SubStatus.ACTIVE,
+        },
+        data: {
           currentPeriodStart: now,
           currentPeriodEnd: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
-          stripeSubscriptionId: null,
         },
       });
+
+      const expiredPaidSubscriptions = await this.prisma.subscription.findMany({
+        where: {
+          currentPeriodEnd: { lte: now },
+          planType: { not: PlanType.BASIC },
+          status: SubStatus.ACTIVE,
+        },
+      });
+
+      for (const subscription of expiredPaidSubscriptions) {
+        if (subscription.stripeSubscriptionId) {
+          try {
+            const stripeSubscription = await this.stripe.subscriptions.retrieve(
+              subscription.stripeSubscriptionId
+            );
+
+            if (stripeSubscription.status === 'active') {
+              await this.prisma.subscription.update({
+                where: { id: subscription.id },
+                data: {
+                  currentPeriodStart: new Date(stripeSubscription.current_period_start * 1000),
+                  currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
+                },
+              });
+              continue;
+            }
+          } catch (error) {
+            this.logger.error(`Failed to check Stripe subscription: ${error.message}`);
+          }
+        }
+
+        await this.prisma.subscription.update({
+          where: { id: subscription.id },
+          data: {
+            planType: PlanType.BASIC,
+            status: SubStatus.ACTIVE,
+            currentPeriodStart: now,
+            currentPeriodEnd: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+            stripeSubscriptionId: null,
+          },
+        });
+      }
+    } catch (error) {
+      this.logger.error(`Error checking expired subscriptions: ${error.message}`, error.stack);
+      throw error;
     }
   }
 
   async createSubscription(userId: number, planType: PlanType) {
     this.logger.log(`Creating subscription for user ${userId} with plan ${planType}`);
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: { subscription: true },
-    });
-
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    if (planType === PlanType.BASIC) {
-      const now = new Date();
-      return this.prisma.subscription.upsert({
-        where: { userId: user.id },
-        create: {
-          userId: user.id,
-          planType,
-          status: SubStatus.ACTIVE,
-          currentPeriodStart: now,
-          currentPeriodEnd: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
-        },
-        update: {
-          planType,
-          status: SubStatus.ACTIVE,
-          currentPeriodStart: now,
-          currentPeriodEnd: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
-        },
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: { subscription: true },
       });
-    }
 
-    let stripeCustomerId = user.subscription?.stripeCustomerId;
-    if (!stripeCustomerId) {
-      const customer = await this.stripe.customers.create({
-        email: user.email,
-        metadata: { userId: user.id.toString() },
-      });
-      stripeCustomerId = customer.id;
+      if (!user) {
+        this.logger.error(`User not found with ID: ${userId}`);
+        throw new Error('User not found');
+      }
 
-      if (user.subscription) {
-        await this.prisma.subscription.update({
+      if (planType === PlanType.BASIC) {
+        const now = new Date();
+        return this.prisma.subscription.upsert({
           where: { userId: user.id },
-          data: { stripeCustomerId },
+          create: {
+            userId: user.id,
+            planType,
+            status: SubStatus.ACTIVE,
+            currentPeriodStart: now,
+            currentPeriodEnd: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+          },
+          update: {
+            planType,
+            status: SubStatus.ACTIVE,
+            currentPeriodStart: now,
+            currentPeriodEnd: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+          },
         });
       }
+
+      let stripeCustomerId = user.subscription?.stripeCustomerId;
+      if (!stripeCustomerId) {
+        const customer = await this.stripe.customers.create({
+          email: user.email,
+          metadata: { userId: user.id.toString() },
+        });
+        stripeCustomerId = customer.id;
+
+        if (user.subscription) {
+          await this.prisma.subscription.update({
+            where: { userId: user.id },
+            data: { stripeCustomerId },
+          });
+        }
+      }
+
+      const successUrl = new URL('/payment/success', this.frontendUrl);
+      successUrl.searchParams.append('session_id', '{CHECKOUT_SESSION_ID}');
+      const cancelUrl = new URL('/payment/cancel', this.frontendUrl);
+
+      const stripeId = this.plans[planType].stripeId;
+      if (!stripeId) {
+        this.logger.error(`Missing Stripe price ID for plan ${planType}`);
+        throw new Error(`Missing Stripe price ID for plan ${planType}`);
+      }
+
+      this.logger.log(`Using Stripe price ID for ${planType}: ${stripeId}`);
+
+      const session = await this.stripe.checkout.sessions.create({
+        customer: stripeCustomerId,
+        mode: 'subscription',
+        payment_method_types: ['card'],
+        line_items: [{
+          price: stripeId,
+          quantity: 1,
+        }],
+        metadata: {
+          userId: user.id.toString(),
+          planType,
+        },
+        success_url: successUrl.toString(),
+        cancel_url: cancelUrl.toString(),
+      });
+
+      return {
+        sessionId: session.id,
+        checkoutUrl: session.url,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to create subscription: ${error.message}`, error.stack);
+      throw error;
     }
-
-    const successUrl = new URL('/payment/success', this.frontendUrl);
-    successUrl.searchParams.append('session_id', '{CHECKOUT_SESSION_ID}');
-    const cancelUrl = new URL('/payment/cancel', this.frontendUrl);
-
-    const stripeId = this.plans[planType].stripeId;
-    if (!stripeId) {
-      throw new Error(`Missing Stripe price ID for plan ${planType}`);
-    }
-
-    this.logger.log(`Using Stripe price ID for ${planType}: ${stripeId}`);
-
-    const session = await this.stripe.checkout.sessions.create({
-      customer: stripeCustomerId,
-      mode: 'subscription',
-      payment_method_types: ['card'],
-      line_items: [{
-        price: stripeId,
-        quantity: 1,
-      }],
-      metadata: {
-        userId: user.id.toString(),
-        planType,
-      },
-      success_url: successUrl.toString(),
-      cancel_url: cancelUrl.toString(),
-    });
-
-    return {
-      sessionId: session.id,
-      checkoutUrl: session.url,
-    };
   }
 
   async getCurrentPlan(userId: number) {
     this.logger.log(`Getting current plan for user ${userId}`);
 
-    const subscription = await this.prisma.subscription.findUnique({
-      where: { userId },
-      select: {
-        planType: true,
-        status: true,
-        currentPeriodStart: true,
-        currentPeriodEnd: true,
-        stripeSubscriptionId: true,
-      },
-    });
+    try {
+      const subscription = await this.prisma.subscription.findUnique({
+        where: { userId },
+        select: {
+          planType: true,
+          status: true,
+          currentPeriodStart: true,
+          currentPeriodEnd: true,
+          stripeSubscriptionId: true,
+        },
+      });
 
-    if (!subscription) {
-      return null;
-    }
-
-    let stripeSubscriptionDetails = null;
-    if (subscription.stripeSubscriptionId) {
-      try {
-        const stripeSubscription = await this.stripe.subscriptions.retrieve(
-          subscription.stripeSubscriptionId
-        );
-        stripeSubscriptionDetails = {
-          cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
-          created: new Date(stripeSubscription.created * 1000),
-        };
-      } catch (error) {
-        this.logger.error(`Failed to fetch Stripe subscription details: ${error.message}`);
+      if (!subscription) {
+        this.logger.warn(`No subscription found for user: ${userId}`);
+        throw new NotFoundException('No subscription found for this user');
       }
-    }
 
-    return {
-      plan: subscription.planType,
-      status: subscription.status,
-      periodStart: subscription.currentPeriodStart,
-      periodEnd: subscription.currentPeriodEnd,
-      ...stripeSubscriptionDetails && { stripeDetails: stripeSubscriptionDetails },
-    };
+      let stripeSubscriptionDetails = null;
+      if (subscription.stripeSubscriptionId) {
+        try {
+          const stripeSubscription = await this.stripe.subscriptions.retrieve(
+            subscription.stripeSubscriptionId
+          );
+          stripeSubscriptionDetails = {
+            cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
+            created: new Date(stripeSubscription.created * 1000),
+          };
+        } catch (error) {
+          this.logger.error(`Failed to fetch Stripe subscription details: ${error.message}`);
+        }
+      }
+
+      return {
+        plan: subscription.planType,
+        status: subscription.status,
+        periodStart: subscription.currentPeriodStart,
+        periodEnd: subscription.currentPeriodEnd,
+        ...stripeSubscriptionDetails && { stripeDetails: stripeSubscriptionDetails },
+      };
+    } catch (error) {
+      if (!(error instanceof NotFoundException)) {
+        this.logger.error(`Failed to get current plan: ${error.message}`, error.stack);
+      }
+      throw error;
+    }
   }
 
   async handleWebhook(signature: string, payload: Buffer) {
     const webhookSecret = this.config.get('STRIPE_WEBHOOK_SECRET');
 
     try {
+      this.logger.log('Processing webhook request');
+
+      if (!payload) {
+        this.logger.error('No raw body found in request');
+        throw new Error('No raw body found in request');
+      }
+
+      this.logger.log(`Raw body length: ${payload.length}`);
+
       const event = this.stripe.webhooks.constructEvent(
         payload,
         signature,
@@ -274,20 +304,35 @@ export class PaymentService implements OnModuleInit {
   }
 
   async getAllSubscriptions() {
-    return this.prisma.subscription.findMany({
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            createdAt: true
+    try {
+      this.logger.log('Fetching all subscriptions');
+      const subscriptions = await this.prisma.subscription.findMany({
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              createdAt: true
+            }
           }
+        },
+        orderBy: {
+          createdAt: 'desc'
         }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
+      });
+
+      this.logger.log(`Retrieved ${subscriptions.length} subscriptions`);
+      return {
+        success: true,
+        data: subscriptions
+      };
+    } catch (error) {
+      this.logger.error('Failed to fetch subscriptions:', error);
+      return {
+        success: false,
+        message: error.message
+      };
+    }
   }
 
   private async handleCheckoutCompleted(session: Stripe.Checkout.Session) {
