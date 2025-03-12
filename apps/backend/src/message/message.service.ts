@@ -1,7 +1,14 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
-import { MessageStatus } from '@prisma/client';
+import { MessageStatus, Message, User } from '@prisma/client';
+
+export type MessageWithRelations = Message & {
+  sender: User;
+  receiver: User;
+};
+
+export type UnreadCountMap = { [key: number]: number };
 
 @Injectable()
 export class MessageService {
@@ -9,7 +16,7 @@ export class MessageService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async sendMessage(createMessageDto: CreateMessageDto) {
+  async sendMessage(createMessageDto: CreateMessageDto): Promise<Message> {
     try {
       const { senderId, receiverId, text, status = MessageStatus.SENT } = createMessageDto;
 
@@ -30,7 +37,7 @@ export class MessageService {
     }
   }
 
-  async getMessagesForUser(currentUserId: number, selectedUserId: number) {
+  async getMessagesForUser(currentUserId: number, selectedUserId: number): Promise<MessageWithRelations[]> {
     try {
       if (currentUserId <= 0 || selectedUserId <= 0) {
         this.logger.error(`Invalid user IDs: ${currentUserId}, ${selectedUserId}`);
@@ -82,7 +89,7 @@ export class MessageService {
     }
   }
 
-  async getUnreadCount(receiverId: number): Promise<{ [key: number]: number }> {
+  async getUnreadCount(receiverId: number): Promise<UnreadCountMap> {
     try {
       const messages = await this.prisma.message.groupBy({
         by: ['senderId'],
@@ -98,7 +105,7 @@ export class MessageService {
       const unreadCount = messages.reduce((acc, group) => {
         acc[group.senderId] = group._count.senderId;
         return acc;
-      }, {} as { [key: number]: number });
+      }, {} as UnreadCountMap);
 
       this.logger.log(`Retrieved unread count for receiver ${receiverId}`);
       return unreadCount;
@@ -108,7 +115,7 @@ export class MessageService {
     }
   }
 
-  async getAllMessages() {
+  async getAllMessages(): Promise<MessageWithRelations[]> {
     try {
       const messages = await this.prisma.message.findMany({
         include: {

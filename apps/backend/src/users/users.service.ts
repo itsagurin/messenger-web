@@ -1,7 +1,24 @@
 import { Injectable, NestMiddleware, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from "../prisma.service";
 import * as bcrypt from 'bcrypt';
-import { PlanType, SubStatus } from '@prisma/client';
+import { PlanType, SubStatus, User } from '@prisma/client';
+
+export interface RegisterResponse {
+    userId: number;
+    email: string;
+    subscription: {
+        planType: PlanType;
+        status: SubStatus;
+        currentPeriodEnd: Date;
+    };
+}
+
+export interface LoginResponse {
+    userId: number;
+    email: string;
+}
+
+export type RefreshTokenResponse = LoginResponse;
 
 @Injectable()
 export class UsersService {
@@ -9,7 +26,7 @@ export class UsersService {
 
     constructor(private readonly prisma: PrismaService) {}
 
-    async register(email: string, password: string) {
+    async register(email: string, password: string): Promise<RegisterResponse> {
         try {
             const existingUser = await this.prisma.user.findUnique({ where: { email } });
             if (existingUser) {
@@ -63,7 +80,7 @@ export class UsersService {
         }
     }
 
-    async login(email: string, password: string) {
+    async login(email: string, password: string): Promise<LoginResponse> {
         try {
             const user = await this.prisma.user.findUnique({ where: { email } });
             if (!user) {
@@ -90,7 +107,7 @@ export class UsersService {
         }
     }
 
-    async refreshToken(refreshToken: string) {
+    async refreshToken(refreshToken: string): Promise<RefreshTokenResponse> {
         try {
             const user = await this.findUserByRefreshToken(refreshToken);
 
@@ -113,7 +130,7 @@ export class UsersService {
         }
     }
 
-    async updateRefreshToken(userId: number, refreshToken: string | null) {
+    async updateRefreshToken(userId: number, refreshToken: string | null): Promise<void> {
         try {
             await this.prisma.user.update({
                 where: { id: userId },
@@ -126,7 +143,7 @@ export class UsersService {
         }
     }
 
-    async findUserByRefreshToken(refreshToken: string) {
+    async findUserByRefreshToken(refreshToken: string): Promise<User | null> {
         try {
             return this.prisma.user.findFirst({
                 where: { refreshToken },
@@ -137,7 +154,7 @@ export class UsersService {
         }
     }
 
-    async findAll() {
+    async findAll(): Promise<User[]> {
         try {
             const users = await this.prisma.user.findMany();
             return users;
@@ -147,7 +164,7 @@ export class UsersService {
         }
     }
 
-    async deleteAllUsers() {
+    async deleteAllUsers(): Promise<void> {
         try {
             await this.prisma.user.deleteMany();
             return;
@@ -157,7 +174,7 @@ export class UsersService {
         }
     }
 
-    async findByEmail(email: string) {
+    async findByEmail(email: string): Promise<User | null> {
         try {
             const user = await this.prisma.user.findUnique({
                 where: { email },
@@ -169,7 +186,7 @@ export class UsersService {
         }
     }
 
-    async deleteCurrentUser(userId: number) {
+    async deleteCurrentUser(userId: number): Promise<void> {
         try {
             await this.prisma.$transaction(async (prisma) => {
                 await prisma.subscription.deleteMany({
@@ -195,7 +212,7 @@ export class UsersService {
 
 @Injectable()
 export class CorsMiddleware implements NestMiddleware {
-    use(req: any, res: any, next: () => void) {
+    use(req: any, res: any, next: () => void): void {
         res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
         res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
         res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');

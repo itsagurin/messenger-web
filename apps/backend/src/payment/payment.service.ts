@@ -2,10 +2,44 @@ import { Injectable, Logger, OnModuleInit, NotFoundException } from '@nestjs/com
 import { PrismaService } from '../prisma.service';
 import Stripe from 'stripe';
 import { ConfigService } from '@nestjs/config';
-import { PlanType, SubStatus } from '@prisma/client';
+import { PlanType, SubStatus, Subscription } from '@prisma/client';
 import { SUBSCRIPTION_PLANS } from './constants/plans.constant';
 import { Cron } from '@nestjs/schedule';
 import { CreateSubscriptionDto } from './dto/subscription.dto';
+
+export interface CheckoutSession {
+  sessionId: string;
+  checkoutUrl: string;
+}
+
+export interface CurrentPlan {
+  plan: PlanType;
+  status: SubStatus;
+  periodStart: Date;
+  periodEnd: Date;
+  stripeDetails?: {
+    cancelAtPeriodEnd: boolean;
+    created: Date;
+  };
+}
+
+export interface SubscriptionWithUser extends Subscription {
+  user: {
+    id: number;
+    email: string;
+    createdAt: Date;
+  };
+}
+
+export interface SubscriptionsResponse {
+  success: boolean;
+  data?: SubscriptionWithUser[];
+  message?: string;
+}
+
+export interface WebhookResponse {
+  received: boolean;
+}
 
 @Injectable()
 export class PaymentService implements OnModuleInit {
@@ -59,7 +93,7 @@ export class PaymentService implements OnModuleInit {
   }
 
   @Cron('0 0 * * *')
-  async checkExpiredSubscriptions() {
+  async checkExpiredSubscriptions(): Promise<void> {
     const now = new Date();
 
     try {
@@ -122,7 +156,7 @@ export class PaymentService implements OnModuleInit {
     }
   }
 
-  async createSubscription(userId: number, planType: PlanType) {
+  async createSubscription(userId: number, planType: PlanType): Promise<Subscription | CheckoutSession> {
     this.logger.log(`Creating subscription for user ${userId} with plan ${planType}`);
 
     try {
@@ -210,7 +244,7 @@ export class PaymentService implements OnModuleInit {
     }
   }
 
-  async getCurrentPlan(userId: number) {
+  async getCurrentPlan(userId: number): Promise<CurrentPlan> {
     this.logger.log(`Getting current plan for user ${userId}`);
 
     try {
@@ -260,7 +294,7 @@ export class PaymentService implements OnModuleInit {
     }
   }
 
-  async handleWebhook(signature: string, payload: Buffer) {
+  async handleWebhook(signature: string, payload: Buffer): Promise<WebhookResponse> {
     const webhookSecret = this.config.get('STRIPE_WEBHOOK_SECRET');
 
     try {
@@ -303,7 +337,7 @@ export class PaymentService implements OnModuleInit {
     }
   }
 
-  async getAllSubscriptions() {
+  async getAllSubscriptions(): Promise<SubscriptionsResponse> {
     try {
       this.logger.log('Fetching all subscriptions');
       const subscriptions = await this.prisma.subscription.findMany({
@@ -335,7 +369,7 @@ export class PaymentService implements OnModuleInit {
     }
   }
 
-  private async handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  private async handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
     if (!session.metadata?.userId) {
       throw new Error('No userId in session metadata');
     }
@@ -365,7 +399,7 @@ export class PaymentService implements OnModuleInit {
     });
   }
 
-  private async handleInvoicePaid(invoice: Stripe.Invoice) {
+  private async handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
     if (!invoice.subscription) return;
 
     const subscription = await this.stripe.subscriptions.retrieve(invoice.subscription as string);
@@ -382,7 +416,7 @@ export class PaymentService implements OnModuleInit {
     });
   }
 
-  private async handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
+  private async handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
     if (!invoice.subscription) return;
 
     const subscription = await this.stripe.subscriptions.retrieve(invoice.subscription as string);
@@ -397,7 +431,7 @@ export class PaymentService implements OnModuleInit {
     });
   }
 
-  private async handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  private async handleSubscriptionDeleted(subscription: Stripe.Subscription): Promise<void> {
     const customer = await this.stripe.customers.retrieve(subscription.customer as string);
     const userId = Number((customer as Stripe.Customer).metadata.userId);
     const now = new Date();
