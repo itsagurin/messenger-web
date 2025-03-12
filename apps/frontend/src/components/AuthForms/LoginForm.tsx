@@ -26,26 +26,34 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
         return;
       }
 
-      const result = await authService.login({ email, password });
+      const response = await authService.login({ email, password });
 
-      if (result.success) {
-        authService.setTokens(result.accessToken, result.refreshToken);
-        setCurrentUser({ userId: result.data.userId, email: result.data.email });
-        navigate('/main');
-        if (onLoginSuccess) {
-          onLoginSuccess();
-        }
-      } else {
-        if (result.message?.includes('No user with this email')) {
+      authService.setTokens(response.accessToken, response.refreshToken);
+
+      setCurrentUser({
+        userId: response.userId,
+        email: response.email
+      });
+
+      navigate('/main');
+      if (onLoginSuccess) {
+        onLoginSuccess();
+      }
+    } catch (error: any) {
+      if (error.response) {
+        const status = error.response.status;
+        const message = error.response.data?.message || 'Login failed';
+
+        if (status === 404) {
           setError('Account not found. Please check your email.');
-        } else if (result.message?.includes('Incorrect password')) {
+        } else if (status === 401) {
           setError('Invalid password. Please try again.');
         } else {
-          setError(result.message ?? 'Login failed. Please try again.');
+          setError(message);
         }
+      } else {
+        setError('An unexpected error occurred. Please try again later.');
       }
-    } catch (error) {
-      setError('An unexpected error occurred. Please try again later.');
     }
   };
 

@@ -57,7 +57,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ className }) => {
       setSubscription(data);
     } catch (err) {
       if (axios.isAxiosError(err)) {
-        const errorMessage = err.response?.data || err.message;
+        const errorMessage = err.response?.data?.message || err.message;
         setError(`Failed to fetch current plan: ${errorMessage}`);
       } else {
         setError(err instanceof Error ? err.message : 'Failed to fetch current plan');
@@ -84,17 +84,11 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ className }) => {
           throw new Error('No access token available');
         }
 
-        const response = await axiosInstance.delete('/auth/delete-account');
+        await axiosInstance.delete('/auth/delete-account');
 
-        const data = response.data;
-
-        if (data.success) {
-          authService.clearTokens();
-          setCurrentUser(null);
-          navigate('/');
-        } else {
-          alert(data.message || 'Failed to delete account');
-        }
+        authService.clearTokens();
+        setCurrentUser(null);
+        navigate('/');
       } catch (error) {
         console.error('Error deleting account:', error);
         alert('An error occurred while trying to delete your account');

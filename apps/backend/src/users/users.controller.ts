@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, UseGuards, Delete, Param, Req } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Delete, Param, Req, HttpException, HttpStatus } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UsersGateway } from '../websocket/wsgateway';
 import { JwtService } from '@nestjs/jwt';
@@ -26,36 +26,33 @@ export class UsersController {
   async register(@Body() body: { email: string; password: string }) {
     const result = await this.usersService.register(body.email, body.password);
 
-    if (result.success) {
-      const tokens = this.generateTokens(result.data.userId, result.data.email);
-      await this.usersService.updateRefreshToken(result.data.userId, tokens.refreshToken);
-      await this.usersGateway.handleUserAuth(result.data.email);
+    const tokens = this.generateTokens(result.userId, result.email);
+    await this.usersService.updateRefreshToken(result.userId, tokens.refreshToken);
+    await this.usersGateway.handleUserAuth(result.email);
 
-      return {
-        ...result,
-        ...tokens
-      };
-    }
-
-    return result;
+    return {
+      message: 'Registration successful',
+      userId: result.userId,
+      email: result.email,
+      subscription: result.subscription,
+      ...tokens
+    };
   }
 
   @Post('login')
   async login(@Body() body: { email: string; password: string }) {
     const result = await this.usersService.login(body.email, body.password);
 
-    if (result.success) {
-      const tokens = this.generateTokens(result.data.userId, result.data.email);
-      await this.usersService.updateRefreshToken(result.data.userId, tokens.refreshToken);
-      await this.usersGateway.handleUserAuth(result.data.email);
+    const tokens = this.generateTokens(result.userId, result.email);
+    await this.usersService.updateRefreshToken(result.userId, tokens.refreshToken);
+    await this.usersGateway.handleUserAuth(result.email);
 
-      return {
-        ...result,
-        ...tokens
-      };
-    }
-
-    return result;
+    return {
+      message: 'Login successful',
+      userId: result.userId,
+      email: result.email,
+      ...tokens
+    };
   }
 
   @Post('refresh')
@@ -64,44 +61,40 @@ export class UsersController {
       const decoded = this.jwtService.verify(body.refreshToken);
       const result = await this.usersService.refreshToken(body.refreshToken);
 
-      if (result.success && result.userId === decoded.sub) {
+      if (result.userId === decoded.sub) {
         const tokens = this.generateTokens(result.userId, result.email);
         await this.usersService.updateRefreshToken(result.userId, tokens.refreshToken);
 
         return {
-          success: true,
           ...tokens
         };
       }
 
-      return {
-        success: false,
-        message: 'Invalid refresh token'
-      };
+      throw new HttpException('Invalid refresh token', HttpStatus.UNAUTHORIZED);
     } catch (error) {
-      return {
-        success: false,
-        message: 'Invalid refresh token'
-      };
+      throw new HttpException('Invalid refresh token', HttpStatus.UNAUTHORIZED);
     }
   }
 
   @Get('users')
   @UseGuards(AuthGuard('jwt'))
   async getAllUsers() {
-    return this.usersService.findAll();
+    const users = await this.usersService.findAll();
+    return users;
   }
 
   @Delete('delete-account')
   @UseGuards(AuthGuard('jwt'))
   async deleteCurrentUser(@Req() req: any) {
     const currentUserId = req.user.userId;
-    return this.usersService.deleteCurrentUser(currentUserId);
+    await this.usersService.deleteCurrentUser(currentUserId);
+    return { message: 'Your account has been successfully deleted' };
   }
 
   @Delete('users/all')
   @UseGuards(AuthGuard('jwt'))
   async deleteAllUsers() {
-    return this.usersService.deleteAllUsers();
+    await this.usersService.deleteAllUsers();
+    return { message: 'All users have been deleted successfully' };
   }
 }

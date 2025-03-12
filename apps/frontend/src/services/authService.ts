@@ -11,11 +11,8 @@ interface RegisterRequest {
 }
 
 interface AuthResponse {
-  success: boolean;
-  data: {
-    userId: number;
-    email: string;
-  };
+  userId: number;
+  email: string;
   accessToken: string;
   refreshToken: string;
   message?: string;
@@ -43,6 +40,16 @@ class AuthService implements AuthServiceInterface {
         'Content-Type': 'application/json',
       },
     });
+
+    this.axiosInstance.interceptors.response.use(
+      response => response,
+      async error => {
+        if (error.response) {
+          throw new Error(error.response.data.message || 'Request failed');
+        }
+        throw error;
+      }
+    );
   }
 
   getAccessToken(): string | null {
@@ -96,9 +103,7 @@ class AuthService implements AuthServiceInterface {
       data
     );
 
-    if (result.success) {
-      this.setTokens(result.accessToken, result.refreshToken);
-    }
+    this.setTokens(result.accessToken, result.refreshToken);
     return result;
   }
 
@@ -109,9 +114,7 @@ class AuthService implements AuthServiceInterface {
       data
     );
 
-    if (result.success) {
-      this.setTokens(result.accessToken, result.refreshToken);
-    }
+    this.setTokens(result.accessToken, result.refreshToken);
     return result;
   }
 
@@ -120,18 +123,14 @@ class AuthService implements AuthServiceInterface {
       const refreshToken = this.getRefreshToken();
       if (!refreshToken) throw new Error('No refresh token available');
 
-      const result = await this.makeRequest<AuthResponse>(
+      const result = await this.makeRequest<{ accessToken: string; refreshToken: string }>(
         '/auth/refresh',
         'POST',
         { refreshToken }
       );
 
-      if (result.success) {
-        this.setTokens(result.accessToken, result.refreshToken);
-        return true;
-      }
-
-      return false;
+      this.setTokens(result.accessToken, result.refreshToken);
+      return true;
     } catch (error) {
       this.clearTokens();
       return false;

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, UseGuards, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Param, ParseIntPipe, HttpCode } from '@nestjs/common';
 import { MessageService } from './message.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { AuthGuard } from '@nestjs/passport';
@@ -24,12 +24,12 @@ export class MessageController {
   }
 
   @Post('mark-read/:senderId/:receiverId')
+  @HttpCode(204)
   async markMessagesAsRead(
     @Param('senderId', ParseIntPipe) senderId: number,
     @Param('receiverId', ParseIntPipe) receiverId: number,
   ) {
     await this.messageService.markMessagesAsRead(senderId, receiverId);
-    return { success: true };
   }
 
   @Get('conversation/:currentUserId/:selectedUserId')

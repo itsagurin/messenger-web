@@ -1,4 +1,4 @@
-import { Injectable, NestMiddleware, Logger } from '@nestjs/common';
+import { Injectable, NestMiddleware, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from "../prisma.service";
 import * as bcrypt from 'bcrypt';
 import { PlanType, SubStatus } from '@prisma/client';
@@ -13,7 +13,7 @@ export class UsersService {
         try {
             const existingUser = await this.prisma.user.findUnique({ where: { email } });
             if (existingUser) {
-                throw new Error('A user with this email address already exists');
+                throw new HttpException('A user with this email address already exists', HttpStatus.CONFLICT);
             }
 
             const hashedPassword = await bcrypt.hash(password, 10);
@@ -44,24 +44,22 @@ export class UsersService {
             });
 
             return {
-                success: true,
-                data: {
-                    message: 'Registration successful',
-                    userId: result.user.id,
-                    email: result.user.email,
-                    subscription: {
-                        planType: result.subscription.planType,
-                        status: result.subscription.status,
-                        currentPeriodEnd: result.subscription.currentPeriodEnd,
-                    }
+                userId: result.user.id,
+                email: result.user.email,
+                subscription: {
+                    planType: result.subscription.planType,
+                    status: result.subscription.status,
+                    currentPeriodEnd: result.subscription.currentPeriodEnd,
                 }
             };
         } catch (error) {
             this.logger.error(`Registration Error: ${error.message}`, error.stack);
-            return {
-                success: false,
-                message: error.message
-            };
+
+            if (error instanceof HttpException) {
+                throw error;
+            }
+
+            throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -69,28 +67,26 @@ export class UsersService {
         try {
             const user = await this.prisma.user.findUnique({ where: { email } });
             if (!user) {
-                throw new Error('No user with this email address was found');
+                throw new HttpException('No user with this email address was found', HttpStatus.NOT_FOUND);
             }
 
             const isPasswordValid = await bcrypt.compare(password, user.password);
             if (!isPasswordValid) {
-                throw new Error('Incorrect password');
+                throw new HttpException('Incorrect password', HttpStatus.UNAUTHORIZED);
             }
 
             return {
-                success: true,
-                data: {
-                    message: 'Entry successful',
-                    userId: user.id,
-                    email: user.email
-                }
+                userId: user.id,
+                email: user.email
             };
         } catch (error) {
             this.logger.error(`Login Error: ${error.message}`, error.stack);
-            return {
-                success: false,
-                message: error.message
-            };
+
+            if (error instanceof HttpException) {
+                throw error;
+            }
+
+            throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -99,20 +95,21 @@ export class UsersService {
             const user = await this.findUserByRefreshToken(refreshToken);
 
             if (!user) {
-                throw new Error('Invalid refresh token');
+                throw new HttpException('Invalid refresh token', HttpStatus.UNAUTHORIZED);
             }
 
             return {
-                success: true,
                 userId: user.id,
                 email: user.email
             };
         } catch (error) {
             this.logger.error(`Refresh Token Error: ${error.message}`, error.stack);
-            return {
-                success: false,
-                message: 'Invalid refresh token'
-            };
+
+            if (error instanceof HttpException) {
+                throw error;
+            }
+
+            throw new HttpException('Invalid refresh token', HttpStatus.UNAUTHORIZED);
         }
     }
 
@@ -122,13 +119,10 @@ export class UsersService {
                 where: { id: userId },
                 data: { refreshToken },
             });
-            return { success: true };
+            return;
         } catch (error) {
             this.logger.error(`Update Refresh Token Error: ${error.message}`, error.stack);
-            return {
-                success: false,
-                message: error.message
-            };
+            throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -146,32 +140,20 @@ export class UsersService {
     async findAll() {
         try {
             const users = await this.prisma.user.findMany();
-            return {
-                success: true,
-                data: users
-            };
+            return users;
         } catch (error) {
             this.logger.error(`Find All Users Error: ${error.message}`, error.stack);
-            return {
-                success: false,
-                message: error.message
-            };
+            throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     async deleteAllUsers() {
         try {
             await this.prisma.user.deleteMany();
-            return {
-                success: true,
-                message: 'All users have been deleted successfully'
-            };
+            return;
         } catch (error) {
             this.logger.error(`Delete All Users Error: ${error.message}`, error.stack);
-            return {
-                success: false,
-                message: error.message
-            };
+            throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -180,16 +162,10 @@ export class UsersService {
             const user = await this.prisma.user.findUnique({
                 where: { email },
             });
-            return {
-                success: true,
-                data: user
-            };
+            return user;
         } catch (error) {
             this.logger.error(`Find By Email Error: ${error.message}`, error.stack);
-            return {
-                success: false,
-                message: error.message
-            };
+            throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -209,16 +185,10 @@ export class UsersService {
                 });
             });
 
-            return {
-                success: true,
-                message: 'Your account has been successfully deleted'
-            };
+            return;
         } catch (error) {
             this.logger.error(`Delete Current User Error: ${error.message}`, error.stack);
-            return {
-                success: false,
-                message: error.message
-            };
+            throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

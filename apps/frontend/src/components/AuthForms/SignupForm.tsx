@@ -32,27 +32,32 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
         return;
       }
 
-      const result = await authService.register({ email, password });
+      const response = await authService.register({ email, password });
 
-      if (result.success) {
-        authService.setTokens(result.accessToken, result.refreshToken);
-        setCurrentUser({
-          userId: result.data.userId,
-          email: result.data.email,
-        });
-        navigate('/main');
-        if (onSignupSuccess) {
-          onSignupSuccess();
-        }
-      } else {
-        if (result.message?.includes('already exists')) {
+      authService.setTokens(response.accessToken, response.refreshToken);
+
+      setCurrentUser({
+        userId: response.userId,
+        email: response.email,
+      });
+
+      navigate('/main');
+      if (onSignupSuccess) {
+        onSignupSuccess();
+      }
+    } catch (error: any) {
+      if (error.response) {
+        const status = error.response.status;
+        const message = error.response.data?.message || 'Registration failed';
+
+        if (status === 409) {
           setError('This email is already registered. Please use a different email or login.');
         } else {
-          setError(result.message ?? 'Registration failed. Please try again.');
+          setError(message);
         }
+      } else {
+        setError('An unexpected error occurred. Please try again later.');
       }
-    } catch (error) {
-      setError('An unexpected error occurred. Please try again later.');
     }
   };
 

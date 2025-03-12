@@ -40,8 +40,8 @@ export class UsersGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.connectedUsers.set(client.id, userEmail);
 
       const userResult = await this.usersService.findByEmail(userEmail);
-      if (userResult.success && userResult.data) {
-        this.userSockets.set(userResult.data.id, client.id);
+      if (userResult) {
+        this.userSockets.set(userResult.id, client.id);
       }
 
       console.log('User connected:', userEmail);
@@ -52,12 +52,8 @@ export class UsersGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
     }
 
-    const usersResult = await this.usersService.findAll();
-    if (usersResult.success) {
-      this.server.emit('users', usersResult.data);
-    } else {
-      console.error('Failed to fetch users:', usersResult.message);
-    }
+    const users = await this.usersService.findAll();
+    this.server.emit('users', users);
   }
 
   async handleDisconnect(@ConnectedSocket() client: Socket) {
@@ -66,9 +62,9 @@ export class UsersGateway implements OnGatewayConnection, OnGatewayDisconnect {
       console.log('User disconnected:', userEmail);
       this.connectedUsers.delete(client.id);
 
-      const userResult = await this.usersService.findByEmail(userEmail);
-      if (userResult.success && userResult.data) {
-        this.userSockets.delete(userResult.data.id);
+      const user = await this.usersService.findByEmail(userEmail);
+      if (user) {
+        this.userSockets.delete(user.id);
       }
 
       this.server.emit('userDisconnected', { email: userEmail });
@@ -96,12 +92,8 @@ export class UsersGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   async updateUsers() {
-    const usersResult = await this.usersService.findAll();
-    if (usersResult.success) {
-      this.server.emit('users', usersResult.data);
-    } else {
-      console.error('Failed to fetch users:', usersResult.message);
-    }
+    const users = await this.usersService.findAll();
+    this.server.emit('users', users);
   }
 
   async handleUserAuth(email: string) {
