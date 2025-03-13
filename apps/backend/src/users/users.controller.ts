@@ -1,10 +1,24 @@
-import { Controller, Post, Body, Get, UseGuards, Delete, Param, Req, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  UseGuards,
+  Delete,
+  Req,
+  HttpException,
+  HttpStatus,
+  UsePipes, ValidationPipe,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UsersGateway } from '../websocket/wsgateway';
 import { JwtService } from '@nestjs/jwt';
 import { AuthGuard } from '@nestjs/passport';
+import { CreateUserDto } from './dto/create-user.dto';
+import { LoginUserDto } from './dto/login-user.dto';
 
 @Controller('auth')
+@UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 export class UsersController {
   constructor(
     private readonly usersService: UsersService,
@@ -23,8 +37,8 @@ export class UsersController {
   }
 
   @Post('register')
-  async register(@Body() body: { email: string; password: string }) {
-    const result = await this.usersService.register(body.email, body.password);
+  async register(@Body() createUserDto: CreateUserDto) {
+    const result = await this.usersService.register(createUserDto.email, createUserDto.password);
 
     const tokens = this.generateTokens(result.userId, result.email);
     await this.usersService.updateRefreshToken(result.userId, tokens.refreshToken);
@@ -40,8 +54,8 @@ export class UsersController {
   }
 
   @Post('login')
-  async login(@Body() body: { email: string; password: string }) {
-    const result = await this.usersService.login(body.email, body.password);
+  async login(@Body() LoginUserDto: LoginUserDto) {
+    const result = await this.usersService.login(LoginUserDto.email, LoginUserDto.password);
 
     const tokens = this.generateTokens(result.userId, result.email);
     await this.usersService.updateRefreshToken(result.userId, tokens.refreshToken);
