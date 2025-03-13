@@ -10,6 +10,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { UsersService } from '../users/users.service';
 import { MessageService } from '../message/message.service';
+import { WebSocketEvents} from './constants/websocket-events.enum';
 
 interface Message {
   id: number;
@@ -67,11 +68,11 @@ export class UsersGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.userSockets.delete(user.id);
       }
 
-      this.server.emit('userDisconnected', { email: userEmail });
+      this.server.emit(WebSocketEvents.USER_DISCONNECTED, { email: userEmail });
     }
   }
 
-  @SubscribeMessage('sendMessage')
+  @SubscribeMessage(WebSocketEvents.SEND_MESSAGE)
   async handleMessage(
     @ConnectedSocket() client: Socket,
     @MessageBody() message: Message,
@@ -80,10 +81,10 @@ export class UsersGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const receiverSocketId = this.userSockets.get(message.receiverId);
 
       if (receiverSocketId) {
-        this.server.to(receiverSocketId).emit('newMessage', message);
+        this.server.to(receiverSocketId).emit(WebSocketEvents.NEW_MESSAGE, message);
       }
 
-      client.emit('newMessage', message);
+      client.emit(WebSocketEvents.NEW_MESSAGE, message);
       return message;
     } catch (error) {
       console.error('Error handling message:', error);
@@ -93,11 +94,11 @@ export class UsersGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   async updateUsers() {
     const users = await this.usersService.findAll();
-    this.server.emit('users', users);
+    this.server.emit(WebSocketEvents.USERS, users);
   }
 
   async handleUserAuth(email: string) {
-    this.server.emit('userConnected', {
+    this.server.emit(WebSocketEvents.USER_CONNECTED, {
       email,
       timestamp: new Date().toISOString()
     });

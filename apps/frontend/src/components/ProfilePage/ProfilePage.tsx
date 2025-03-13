@@ -84,7 +84,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ className }) => {
           throw new Error('No access token available');
         }
 
-        await axiosInstance.delete('/auth/delete-account');
+        await axiosInstance.delete('/auth/');
 
         authService.clearTokens();
         setCurrentUser(null);

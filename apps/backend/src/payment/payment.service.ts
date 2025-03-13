@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { PlanType, SubStatus, Subscription } from '@prisma/client';
 import { SUBSCRIPTION_PLANS } from './constants/plans.constant';
 import { Cron } from '@nestjs/schedule';
-import { CreateSubscriptionDto } from './dto/subscription.dto';
+import { StripeEventType } from './constants/stripe.constant';
 
 export interface CheckoutSession {
   sessionId: string;
@@ -316,16 +316,16 @@ export class PaymentService implements OnModuleInit {
       this.logger.log(`Processing webhook event type: ${event.type}`);
 
       switch (event.type) {
-        case 'checkout.session.completed':
+        case StripeEventType.CHECKOUT_SESSION_COMPLETED:
           await this.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
           break;
-        case 'invoice.paid':
+        case StripeEventType.INVOICE_PAID:
           await this.handleInvoicePaid(event.data.object as Stripe.Invoice);
           break;
-        case 'invoice.payment_failed':
+        case StripeEventType.INVOICE_PAYMENT_FAILED:
           await this.handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
           break;
-        case 'customer.subscription.deleted':
+        case StripeEventType.CUSTOMER_SUBSCRIPTION_DELETED:
           await this.handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
           break;
       }

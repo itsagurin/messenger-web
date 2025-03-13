@@ -83,7 +83,7 @@ export class UsersController {
     return users;
   }
 
-  @Delete('delete-account')
+  @Delete()
   @UseGuards(AuthGuard('jwt'))
   async deleteCurrentUser(@Req() req: any) {
     const currentUserId = req.user.userId;
