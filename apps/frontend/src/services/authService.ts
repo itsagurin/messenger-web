@@ -40,16 +40,6 @@ class AuthService implements AuthServiceInterface {
         'Content-Type': 'application/json',
       },
     });
-
-    this.axiosInstance.interceptors.response.use(
-      response => response,
-      async error => {
-        if (error.response) {
-          throw new Error(error.response.data.message || 'Request failed');
-        }
-        throw error;
-      }
-    );
   }
 
   getAccessToken(): string | null {
@@ -89,9 +79,6 @@ class AuthService implements AuthServiceInterface {
       const response = await this.axiosInstance.request<T>(config);
       return response.data;
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.message || 'Request failed');
-      }
       throw error;
     }
   }
