@@ -1,7 +1,7 @@
 import React, { useState, ChangeEvent } from 'react';
-import { authService } from '../../services/authService.ts';
+import { authService } from '../../services/authService';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '../../services/userContext.tsx';
+import { useUser } from '../../services/userContext';
 
 interface SignupFormProps {
   onSignupSuccess?: () => void;
@@ -67,19 +67,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
     <div className="form-item sign-up">
       <div className="table">
         <div className="table-cell">
-          {error && (
-            <div className="error-message" style={{
-              color: '#ff3333',
-              backgroundColor: '#ffebeb',
-              padding: '10px',
-              borderRadius: '4px',
-              marginBottom: '15px',
-              fontSize: '14px',
-              textAlign: 'center'
-            }}>
-              {error}
-            </div>
-          )}
+          {error && <ErrorMessage message={error} />}
           <form onSubmit={handleSubmit}>
             <input
               name="email-signup"
@@ -106,3 +94,21 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
 };
 
 export default React.memo(SignupForm);
+
+interface ErrorMessageProps {
+  message: string;
+}
+
+const ErrorMessage: React.FC<ErrorMessageProps> = ({ message }) => (
+  <div className="error-message" style={{
+    color: '#ff3333',
+    backgroundColor: '#ffebeb',
+    padding: '10px',
+    borderRadius: '4px',
+    marginBottom: '15px',
+    fontSize: '14px',
+    textAlign: 'center'
+  }}>
+    {message}
+  </div>
+);
