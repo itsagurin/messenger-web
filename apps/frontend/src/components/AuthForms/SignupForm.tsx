@@ -26,12 +26,6 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
         return;
       }
 
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        setError('Please enter a valid email address');
-        return;
-      }
-
       const response = await authService.register({ email, password });
 
       authService.setTokens(response.accessToken, response.refreshToken);
@@ -50,10 +44,18 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
         const status = error.response.status;
         const message = error.response.data?.message || 'Registration failed';
 
-        if (status === 409) {
-          setError('This email is already registered. Please use a different email or login.');
-        } else {
-          setError(message);
+        switch (status) {
+          case 409:
+            setError('This email is already registered. Please use a different email or login.');
+            break;
+          case 422:
+            setError(message);
+            break;
+          case 423:
+            setError(message);
+            break;
+          default:
+            setError(message);
         }
       } else {
         setError('An unexpected error occurred. Please try again later.');

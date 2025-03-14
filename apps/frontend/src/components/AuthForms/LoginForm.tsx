@@ -44,12 +44,18 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
         const status = error.response.status;
         const message = error.response.data?.message || 'Login failed';
 
-        if (status === 404) {
-          setError('Account not found. Please check your email.');
-        } else if (status === 401) {
-          setError('Invalid password. Please try again.');
-        } else {
-          setError(message);
+        switch (status) {
+          case 404:
+            setError('Account not found. Please check your email.');
+            break;
+          case 401:
+            setError('Invalid password. Please try again.');
+            break;
+          case 422:
+            setError(message);
+            break;
+          default:
+            setError(message);
         }
       } else {
         setError('An unexpected error occurred. Please try again later.');
