@@ -1,5 +1,6 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { CorsMiddleware, UsersService } from './users.service';
+import { UsersService } from './users.service';
+import { CorsMiddleware } from '../middleware/cors.middleware';
 import { UsersController } from './users.controller';
 import { PrismaService } from "../prisma.service";
 import { UsersGateway } from "../websocket/wsgateway";

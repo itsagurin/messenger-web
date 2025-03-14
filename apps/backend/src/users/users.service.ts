@@ -1,4 +1,4 @@
-import { Injectable, NestMiddleware, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from "../prisma.service";
 import * as bcrypt from 'bcrypt';
 import { PlanType, SubStatus, User } from '@prisma/client';
@@ -206,22 +206,6 @@ export class UsersService {
         } catch (error) {
             this.logger.error(`Delete Current User Error: ${error.message}`, error.stack);
             throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-}
-
-@Injectable()
-export class CorsMiddleware implements NestMiddleware {
-    use(req: any, res: any, next: () => void): void {
-        res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
-        res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-        res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-        res.header('Access-Control-Allow-Credentials', 'true');
-        if (req.method === 'OPTIONS') {
-            res.status(204).send();
-            return;
-        } else {
-            next();
         }
     }
 }
