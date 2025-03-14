@@ -7,10 +7,8 @@ import { UserProvider } from '../services/userContext.tsx';
 const Messenger: React.FC = () => {
   return (
     <UserProvider>
-      <div id="root">
-        <HeaderBlock className="header-block" />
-        <Chat className="chat-block" />
-      </div>
+      <HeaderBlock className="header-block" />
+      <Chat className="chat-block" />
     </UserProvider>
   );
 };

@@ -5,9 +5,7 @@ import SubscriptionSuccess from '../../components/SubscriptionSuccess/Subscripti
 const PaymentSuccess: React.FC = () => {
   return (
     <UserProvider>
-      <div id="root">
-        <SubscriptionSuccess />
-      </div>
+      <SubscriptionSuccess />
     </UserProvider>
   );
 };

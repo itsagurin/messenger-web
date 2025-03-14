@@ -5,9 +5,7 @@ import SubscriptionFailure from '../../components/SubscriptionFailure/Subscripti
 const PaymentCancel: React.FC = () => {
   return (
     <UserProvider>
-      <div id="root">
-        <SubscriptionFailure />
-      </div>
+      <SubscriptionFailure />
     </UserProvider>
   );
 };

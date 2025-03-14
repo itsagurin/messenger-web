@@ -2,6 +2,7 @@ import React, { useState, ChangeEvent } from 'react';
 import { authService } from '../../services/authService';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../services/userContext';
+import ErrorMessage from '../ErrorMessage/ErrorMessage.tsx';
 
 interface LoginFormProps {
   onLoginSuccess?: () => void;
@@ -94,21 +95,3 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
 };
 
 export default React.memo(LoginForm);
-
-interface ErrorMessageProps {
-  message: string;
-}
-
-const ErrorMessage: React.FC<ErrorMessageProps> = ({ message }) => (
-  <div className="error-message" style={{
-    color: '#ff3333',
-    backgroundColor: '#ffebeb',
-    padding: '10px',
-    borderRadius: '4px',
-    marginBottom: '15px',
-    fontSize: '14px',
-    textAlign: 'center'
-  }}>
-    {message}
-  </div>
-);

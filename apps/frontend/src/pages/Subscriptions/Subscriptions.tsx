@@ -8,9 +8,7 @@ const Subscriptions: React.FC = () => {
   return (
     <UserProvider>
       <SubscriptionProvider>
-        <div id="root">
-          <PlansPage className="PlansStyles"/>
-        </div>
+        <PlansPage className="PlansStyles"/>
       </SubscriptionProvider>
     </UserProvider>
   );

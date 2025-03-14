@@ -5,9 +5,7 @@ import ProfilePage from '../../components/ProfilePage/ProfilePage.tsx';
 const Profile: React.FC = () => {
   return (
     <UserProvider>
-      <div id="root">
-        <ProfilePage />
-      </div>
+      <ProfilePage />
     </UserProvider>
   );
 };
