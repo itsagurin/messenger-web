@@ -5,8 +5,7 @@ import { toast } from 'react-hot-toast';
 import './PlansPage.css';
 import { useSubscription } from '../../contexts/SubscriptionContext';
 import { useUser } from '../../services/userContext.tsx';
-
-type PlanType = 'BASIC' | 'PLUS' | 'PREMIUM';
+import { PlanType } from '../../contexts/PlanTypes';
 
 interface PlanFeature {
   prefix?: string;
@@ -23,7 +22,7 @@ interface SubscriptionPlan {
 
 const subscriptionPlans: SubscriptionPlan[] = [
   {
-    type: 'BASIC',
+    type: PlanType.BASIC,
     price: 0,
     features: [
       { prefix: 'Get started with ', bold: 'messaging' },
@@ -32,7 +31,7 @@ const subscriptionPlans: SubscriptionPlan[] = [
     ],
   },
   {
-    type: 'PLUS',
+    type: PlanType.PLUS,
     price: 5,
     isPopular: true,
     features: [
@@ -42,7 +41,7 @@ const subscriptionPlans: SubscriptionPlan[] = [
     ],
   },
   {
-    type: 'PREMIUM',
+    type: PlanType.PREMIUM,
     price: 10,
     features: [
       { prefix: 'All features in ', bold: 'Plus' },
@@ -71,7 +70,7 @@ const PlansPage: React.FC<PlansPageProps> = ({ className }) => {
 
     try {
       await subscribe(planType);
-      if (planType === 'BASIC') {
+      if (planType === PlanType.BASIC) {
         await fetchCurrentPlan();
         toast.success(`Successfully subscribed to ${planType} plan!`);
       }

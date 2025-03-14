@@ -1,10 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import axios from 'axios';
 import { useUser } from '../services/userContext.tsx';
+import { PlanType } from './PlanTypes';
 
 const API_URL = import.meta.env.VITE_API_URL;
-
-type PlanType = 'BASIC' | 'PLUS' | 'PREMIUM';
 
 interface SubscriptionContextType {
   currentPlan: PlanType;
@@ -15,7 +14,7 @@ interface SubscriptionContextType {
 }
 
 const defaultContextValue: SubscriptionContextType = {
-  currentPlan: 'BASIC',
+  currentPlan: PlanType.BASIC,
   isLoading: false,
   error: null,
   subscribe: async () => {},
@@ -37,7 +36,7 @@ const axiosInstance = axios.create({
 
 export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ children }) => {
   const { currentUser } = useUser();
-  const [currentPlan, setCurrentPlan] = useState<PlanType>('BASIC');
+  const [currentPlan, setCurrentPlan] = useState<PlanType>(PlanType.BASIC);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -93,7 +92,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
 
       const data = response.data;
 
-      if (planType === 'BASIC') {
+      if (planType === PlanType.BASIC) {
         setCurrentPlan(planType);
         return;
       }
