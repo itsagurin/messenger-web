@@ -12,19 +12,20 @@ import Profile from '../src/pages/profile/profile.tsx';
 import Subscriptions from '../src/pages/Subscriptions/Subscriptions.tsx';
 import PaymentSuccess from '../src/pages/paymentSuccess/paymentSuccess.tsx';
 import PaymentCancel from '../src/pages/paymentCancel/paymentCancel.tsx';
+import { RoutePaths } from './constants/routePaths.ts';
 
 export const router = createBrowserRouter(
   createRoutesFromElements(
     <>
-      <Route path="/" element={<App />} />
+      <Route path={RoutePaths.HOME} element={<App />} />
       <Route element={<PrivateRoute />}>
-        <Route path="/main" element={<Messenger />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/subscriptions" element={<Subscriptions />} />
+        <Route path={RoutePaths.MAIN} element={<Messenger />} />
+        <Route path={RoutePaths.PROFILE} element={<Profile />} />
+        <Route path={RoutePaths.SUBSCRIPTIONS} element={<Subscriptions />} />
       </Route>
-      <Route path="/access-denied" element={<AccessDenied />} />
-      <Route path="/payment/success" element={<PaymentSuccess />} />
-      <Route path="/payment/cancel" element={<PaymentCancel />} />
+      <Route path={RoutePaths.ACCESS_DENIED} element={<AccessDenied />} />
+      <Route path={RoutePaths.PAYMENT_SUCCESS} element={<PaymentSuccess />} />
+      <Route path={RoutePaths.PAYMENT_CANCEL} element={<PaymentCancel />} />
       <Route path="*" element={<div>Not found</div>} />
     </>
   ),

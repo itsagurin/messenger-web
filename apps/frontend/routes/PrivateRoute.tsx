@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { authService} from '../src/services/authService.ts';
+import { RoutePaths } from './constants/routePaths.ts';
 
 const PrivateRoute: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -17,7 +18,7 @@ const PrivateRoute: React.FC = () => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/access-denied" replace />;
+    return <Navigate to={RoutePaths.ACCESS_DENIED} replace />;
   }
 
   return <Outlet />;
