@@ -1,0 +1,7 @@
+{
+  "name": "@messenger/shared",
+  "version": "1.0.0",
+  "main": "./src/types/message.js",
+  "types": "./src/types/message.d.ts",
+  "license": "MIT"
+}

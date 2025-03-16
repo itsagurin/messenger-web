@@ -4,22 +4,7 @@ import axios from 'axios';
 import { useUser } from '../../services/userContext';
 import './Chat.css';
 import { authService } from '../../services/authService.ts';
-
-interface User {
-  id: number;
-  email: string;
-}
-
-interface Message {
-  id: number;
-  senderId: number;
-  receiverId: number;
-  text: string;
-  createdAt: string;
-  status: string;
-  sender?: User;
-  receiver?: User;
-}
+import { Message, User } from '@messenger/shared';
 
 interface ChatComponentProps {
   className?: string;

@@ -1,12 +1,8 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
-import { MessageStatus, Message, User } from '@prisma/client';
-
-export type MessageWithRelations = Message & {
-  sender: User;
-  receiver: User;
-};
+import { MessageStatus } from '@prisma/client';
+import { Message } from '@messenger/shared';
 
 export type UnreadCountMap = { [key: number]: number };
 
@@ -37,7 +33,7 @@ export class MessageService {
     }
   }
 
-  async getMessagesForUser(currentUserId: number, selectedUserId: number): Promise<MessageWithRelations[]> {
+  async getMessagesForUser(currentUserId: number, selectedUserId: number): Promise<Message[]> {
     try {
       if (currentUserId <= 0 || selectedUserId <= 0) {
         this.logger.error(`Invalid user IDs: ${currentUserId}, ${selectedUserId}`);
@@ -115,7 +111,7 @@ export class MessageService {
     }
   }
 
-  async getAllMessages(): Promise<MessageWithRelations[]> {
+  async getAllMessages(): Promise<Message[]> {
     try {
       const messages = await this.prisma.message.findMany({
         include: {
