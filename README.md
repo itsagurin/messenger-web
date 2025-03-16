@@ -38,6 +38,8 @@ Before you begin, ensure you have the following installed:
 
 ## 🔑 Environment Variables
 
+### To use Docker:
+
 Create a `.env` file in the root directory using `.env.example`
 
 ### To use Turborepo:
